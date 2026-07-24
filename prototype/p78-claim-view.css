@@ -1,0 +1,36 @@
+.claimSection{min-width:0;container-type:inline-size}
+.claimControls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:end;margin-bottom:8px}
+.claimControls label{display:grid;gap:3px;min-width:0;color:#5c6980;font-size:10px}
+.claimControls input{box-sizing:border-box;width:100%;min-width:0;height:30px;border:1px solid #cad3df;border-radius:5px;background:#fff;color:#182333;padding:0 8px;font:inherit}
+.claimControls button{height:30px;border-radius:5px;padding:0 10px;white-space:nowrap}
+.claimTrace{min-width:0;color:#263347}
+.claimHead{display:grid;gap:6px;padding:7px 0;border-bottom:1px solid #d9e0e8}
+.claimState{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.claimState b{font-size:11px;color:#9b3c31}
+.claimState b.ready{color:#008d79}
+.claimState span{font-size:10px;color:#66758b;text-align:right}
+.claimIdentities{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.claimIdentity{display:flex;align-items:center;gap:4px;flex:0 0 auto;font-size:9px;color:#77849a}
+.claimIdentity b{font-weight:600}.claimIdentity code{color:#35445b}
+.claimGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:1px solid #d9e0e8}
+.claimFact{display:grid;gap:3px;min-width:0;padding:7px 7px 7px 0;border-bottom:1px solid #edf0f4}
+.claimFact:nth-child(even){padding-left:7px;border-left:1px solid #e1e6ed}
+.claimFact span{font-size:9px;color:#738096;text-transform:uppercase}
+.claimFact b{min-width:0;font-size:10px;color:#25334a;overflow-wrap:anywhere}
+.claimFact.predicate b{color:#008d79}.claimFact.qualifiers{border-left:0;padding-left:0}
+.claimArguments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;min-width:0;padding:7px 0}
+.claimArgument{min-width:0;padding:4px 5px;border-left:3px solid #7567d8;background:#f6f8fa;color:#35445b;font-size:9px;overflow-wrap:anywhere;white-space:normal}
+.claimMatches{border-top:1px solid #d9e0e8;padding:7px 0}
+.claimMatchHead{margin-bottom:5px;font-size:9px;font-weight:700;color:#687891}
+.claimMatch{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;padding:5px 0;border-top:1px solid #edf0f4}
+.claimMatch b{min-width:0;font-size:10px;color:#25334a;overflow-wrap:anywhere}
+.claimMatch code{min-width:0;font-size:8px;color:#7567d8;overflow-wrap:anywhere}
+.claimEvidenceBoundary{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 7px;padding:7px 0;border-top:1px solid #d9e0e8;border-bottom:1px solid #d9e0e8}
+.claimEvidenceBoundary b{font-size:10px;color:#d8513f}.claimEvidenceBoundary span{font-size:9px;color:#66758b;text-align:right}.claimEvidenceBoundary code{grid-column:1/-1;font-size:9px;color:#d8513f}
+.claimSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;min-width:0;padding-top:7px}
+.claimStep{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 5px;align-items:center;min-width:0;min-height:34px;padding:4px 5px;border-left:3px solid #cad3df;background:#f6f8fa}
+.claimStep b,.claimStep span{font-size:9px}.claimStep b{color:#637188}.claimStep span{color:#25334a}.claimStep code{grid-column:1/-1;font-size:8px;color:#6f7c90;overflow-wrap:anywhere}
+.claimStep.ready{border-left-color:#008d79}.claimStep.ambiguous,.claimStep.abstain{border-left-color:#e3aa2c}.claimStep.oov,.claimStep.invalid{border-left-color:#d8513f}
+.claimEmpty{padding:7px 0;font-size:9px;line-height:1.45;color:#66758b;overflow-wrap:anywhere}
+@container (max-width:520px){.claimControls{grid-template-columns:1fr}.claimControls button{height:32px}.claimGrid,.claimArguments,.claimSteps{grid-template-columns:1fr}.claimFact:nth-child(even){padding-left:0;border-left:0}.claimState{align-items:flex-start;flex-direction:column}.claimState span{text-align:left}}
+@media (max-width:680px){.claimControls{grid-template-columns:1fr}}

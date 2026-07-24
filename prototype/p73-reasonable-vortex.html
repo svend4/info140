@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п73 · Разумный круговорот</title>
+<style>
+:root{--bg:#0e1016;--pnl:#161a24;--ink:#e8ecf5;--dim:#93a0b4;--acc:#7F77DD;--line:#232a38;--well:#0a0c12;}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6fb;--pnl:#ffffff;--ink:#1b2230;--dim:#54607a;--line:#dce3ee;--well:#0c0f16;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:14px}
+h1{font-size:18px;margin:0 0 3px}
+h1 small{color:var(--dim);font-weight:400;font-size:12px}
+.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px}
+.grid{display:flex;gap:14px;flex-wrap:wrap}
+.col{flex:1 1 430px;min-width:300px}
+canvas{background:var(--well);border-radius:12px;display:block;touch-action:none}
+#c{width:100%;height:auto;aspect-ratio:1/1}
+.card{background:var(--pnl);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px}
+.ctl label{font-size:12px;color:var(--dim);display:flex;gap:6px;align-items:center}
+input[type=range]{width:118px;accent-color:var(--acc)}
+button{background:#212a3b;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:12.5px}
+@media (prefers-color-scheme:light){button{background:#eef2f9}}
+button:hover{border-color:var(--acc)}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.two{display:flex;gap:10px}.two>div{flex:1;min-width:0}
+.meter{font-size:12px;color:var(--dim)}.meter b{color:var(--ink)}
+.mini{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.bar{height:8px;border-radius:5px;background:#212a3b;overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#D85A30,#EF9F27,#1D9E75,#378ADD,#7F77DD);transition:width .15s}
+.jr{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;height:150px;overflow:auto;background:var(--well);border-radius:8px;padding:8px;color:#c3ccdc}
+.jr div{margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb{color:#EF9F27}.hg{color:#1D9E75}.hr{color:#D85A30}
+#hist,#spir{width:100%;height:auto;background:var(--well);border-radius:8px}
+#hist{aspect-ratio:5/3}#spir{aspect-ratio:1/1}
+.mono{font-family:ui-monospace,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>п73 · Разумный круговорот <small>— бесконечное движение в живом кольце, честно на цифрах</small></h1>
+  <p class="sub">Центр = коллапс (обобщение, λ→1) · край = вылет из системы и распад (дробление, λ→0). Жизнь — круговорот в кольце между ними. Четыре механизма разом: <b>иррациональный поворот</b> (движение никогда не повторяется — теорема Вейля) · <b>спираль φ</b> (частицы встают одна за другой) · <b>цифры π</b> (детерминированы = предсказуемы, но не скучны) · <b>бэктрекинг</b> (ветвь упёрлась в полюс → откат на несколько шагов → продолжаю).</p>
+  <div class="grid">
+    <div class="col">
+      <canvas id="c" width="460" height="460"></canvas>
+      <div class="ctl">
+        <label>λ рычаг <input id="lam" type="range" min="5" max="95" value="50"></label>
+        <label>скорость <input id="spd" type="range" min="1" max="30" value="10"></label>
+        <button id="ang" class="on">угол: φ (иррац.)</button>
+        <button id="pause">пауза</button>
+        <button id="step">шаг</button>
+        <button id="reset">сброс</button>
+        <button id="mode">◐ POV-мультик</button>
+      </div>
+    </div>
+    <div class="col">
+      <div id="vortexPanels">
+      <div class="card">
+        <div class="two">
+          <div>
+            <div class="meter">равнораспределение угла <span class="mono" style="font-size:10.5px">(Вейль)</span></div>
+            <canvas id="hist" width="200" height="120"></canvas>
+          </div>
+          <div>
+            <div class="meter">спираль φ · филлотаксис</div>
+            <canvas id="spir" width="140" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="meter">M(λ) — здоровье кольца <b id="mval">1.00</b></div>
+        <div class="bar"><i id="mbar" style="width:100%"></i></div>
+        <div class="mini">
+          <span class="meter">период: <b id="per">∞ живой</b></span>
+          <span class="meter">откатов: <b id="bk">0</b></span>
+          <span class="meter">цифр π: <b id="dg">0</b></span>
+        </div>
+        <div class="meter" style="margin-top:6px">поток π: <b id="pistream" class="mono">3.</b></div>
+      </div>
+      <div class="card">
+        <div class="meter" style="margin-bottom:5px">журнал ветвления</div>
+        <div class="jr" id="jr"></div>
+      </div>
+      </div><!-- /vortexPanels -->
+      <div id="povPanels" style="display:none">
+        <div class="card">
+          <div class="meter" style="margin-bottom:6px">POV-мультик — изображение из вращения</div>
+          <div class="ctl" style="margin-top:0">
+            <button class="pic on" data-p="smiley">🙂</button>
+            <button class="pic" data-p="heart">♥</button>
+            <button class="pic" data-p="star">★</button>
+            <button class="pic" data-p="ball">●</button>
+            <button class="pic" data-p="chaos">🌀 хаос</button>
+            <button class="pic" data-p="cave">🖐 наскальное</button>
+          </div>
+          <div class="ctl">
+            <label>оживление <input id="pdrift" type="range" min="0" max="60" value="16"></label>
+            <label>выдержка <input id="ppers" type="range" min="4" max="42" value="10"></label>
+          </div>
+          <p style="font-size:12px;color:var(--dim);margin:8px 0 0">Лопасть крутится по кольцу, «диоды» вспыхивают по образу — <b>инерция зрения</b> сшивает картинку (фосфор-след помогает на 60 к/с). Картинка нестабильна: кадры сменяются и всё дрейфует. <b>🌀 хаос</b> — странный аттрактор Де Жонга (настоящий детерминированный хаос, docs/19 «rotation vs mixing»): честно даёт лишь <b>спираль</b> и <b>зеркальную симметрию</b>; «вон зверь/лицо» дорисовывает глаз — это <b>парейдолия</b> (как фигуры в облаках), уравнение образа не задумывало. <b>🖐 наскальное</b> — turtle-грамматика: среди хаотичных мазков прибор <b>намеренно и редко</b> выкладывает примитив (человечек, олень, солнце, рука, рыба, спираль), собранный из штрихов-конечностей — вот это честно «фигура» (объективно в пикселях), а не померещилась.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+var TAU=Math.PI*2;
+
+/* ---- π честно через формулу Мэчина: π = 16·arctan(1/5) − 4·arctan(1/239) (BigInt) ---- */
+function machinPi(dig){
+  var S=10n**BigInt(dig+8);
+  function actan(x){
+    var xb=BigInt(x), x2=xb*xb, term=S/xb, sum=term, k=1n, sign=-1n;
+    while(term!==0n){ term=term/x2; sum+=sign*(term/(2n*k+1n)); sign=-sign; k++; }
+    return sum;
+  }
+  var pi=16n*actan(5n)-4n*actan(239n);
+  return pi.toString().slice(0,dig+1); // "314159265..." (первая цифра 3)
+}
+var PI="3141592653589793", wrapped=false;
+try{ PI=machinPi(300); }catch(e){ /* очень старый движок без BigInt — короткий запас */ }
+var piPtr=0;
+function nextDigit(){
+  var d=PI.charCodeAt(piPtr)-48; piPtr++;
+  if(piPtr>=PI.length){ piPtr=1; wrapped=true; }
+  return (d<0||d>9)?0:d;
+}
+
+/* ---- элементы ---- */
+var $=function(id){return document.getElementById(id);};
+var c=$('c'),g=c.getContext('2d');
+var hc=$('hist'),hg=hc.getContext('2d');
+var sc=$('spir'),sg=sc.getContext('2d');
+var lam=$('lam'),spd=$('spd');
+var angBtn=$('ang'),pauseBtn=$('pause'),stepBtn=$('step'),resetBtn=$('reset');
+var mval=$('mval'),mbar=$('mbar'),per=$('per'),bkEl=$('bk'),dgEl=$('dg'),piEl=$('pistream'),jr=$('jr');
+
+/* ---- геометрия ---- */
+var CX=230,CY=230,RIN=52,ROUT=204;         // кольцо живой зоны
+var DR=13,BIAS=0.075,BK=4,TRIES=6,MAXPATH=240;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30']; // центр→край
+var ROT_IRR=TAU*0.6180339887498949, ROT_RAT=TAU/6;
+var irr=true, running=true, backtracks=0, digitsUsed=0, flash=0, flashOut=false;
+var HB=36, hist=new Int32Array(HB), histTot=0;
+var path=[];
+
+function colAt(r){ var f=(r-RIN)/(ROUT-RIN); f=f<0?0:f>1?1:f; return RAMP[Math.min(5,Math.floor(f*6))]; }
+function rStarOf(lam01){ var lo=RIN-24, hi=ROUT+24; return lo+(1-lam01)*(hi-lo); } // λ→1 тянет за центр (коллапс), λ→0 за край (вылет)
+function pushHist(th){ var a=((th%TAU)+TAU)%TAU; var i=Math.floor(a/TAU*HB)%HB; hist[i]++; histTot++; }
+
+function log(txt,cls){
+  var d=document.createElement('div'); if(cls)d.className=cls; d.textContent=txt;
+  jr.insertBefore(d,jr.firstChild);
+  while(jr.childNodes.length>70) jr.removeChild(jr.lastChild);
+}
+
+function seed(){
+  path=[{th:0,r:(RIN+ROUT)/2,d:3}];
+  hist=new Int32Array(HB); histTot=0; backtracks=0; digitsUsed=0; piPtr=1; wrapped=false;
+  jr.innerHTML=''; flash=0;
+  log('старт: частица в середине кольца, r='+((RIN+ROUT)/2|0));
+}
+seed();
+
+/* ---- один шаг разумного круговорота ---- */
+function step(){
+  var head=path[path.length-1];
+  var lam01=+lam.value/100;
+  var th2=head.th+(irr?ROT_IRR:ROT_RAT);
+  var d=nextDigit(); digitsUsed++;
+  var noise=((d/9)*2-1)*8;            // цифра π: детерминированный, но «шумный» радиальный сдвиг
+  var drift=(0.5-lam01)*2*5.2;        // рычаг λ: λ<0.5 наружу (к краю), λ>0.5 внутрь (к центру)
+  var r2=head.r+noise+drift;
+  if(r2>RIN && r2<ROUT){
+    path.push({th:th2,r:r2,d:d}); pushHist(th2);
+    if(path.length>MAXPATH) path.shift();
+  }else{
+    var atEdge=r2>=ROUT;               // пересекли границу = полюс достигнут = окончание ветви
+    var popped=0;
+    for(var b=0;b<BK && path.length>1;b++){ path.pop(); popped++; }
+    if(path.length<1) path.push({th:head.th,r:(RIN+ROUT)/2,d:3});
+    backtracks++; flashOut=atEdge; flash=10;
+    log('✂ '+(atEdge?'вылет за край (распад)':'провал в центр (коллапс)')+' → откат на '+popped+', продолжаю', atEdge?'hr':'hb');
+  }
+}
+
+/* ---- отрисовка кольца ---- */
+function draw(){
+  g.clearRect(0,0,c.width,c.height);
+  var lam01=+lam.value/100;
+
+  // фон живой зоны
+  var ann=g.createRadialGradient(CX,CY,RIN,CX,CY,ROUT);
+  ann.addColorStop(0,'rgba(127,119,221,0.05)');
+  ann.addColorStop(0.5,'rgba(29,158,117,0.07)');
+  ann.addColorStop(1,'rgba(216,90,48,0.05)');
+  g.fillStyle=ann; g.beginPath(); g.arc(CX,CY,ROUT,0,TAU); g.fill();
+
+  // колодец коллапса (центр)
+  var well=g.createRadialGradient(CX,CY,0,CX,CY,RIN);
+  well.addColorStop(0,'rgba(127,119,221,0.42)'); well.addColorStop(1,'rgba(10,12,18,0)');
+  g.fillStyle=well; g.beginPath(); g.arc(CX,CY,RIN,0,TAU); g.fill();
+  g.setLineDash([3,4]); g.strokeStyle='rgba(127,119,221,0.55)'; g.lineWidth=1;
+  g.beginPath(); g.arc(CX,CY,RIN,0,TAU); g.stroke();
+
+  // граница вылета (край)
+  g.strokeStyle='rgba(216,90,48,0.7)'; g.beginPath(); g.arc(CX,CY,ROUT,0,TAU); g.stroke();
+  g.setLineDash([]);
+
+  // куда тянет рычаг: подсветить опасный полюс
+  if(lam01>0.56){ g.setLineDash([3,4]); g.strokeStyle='rgba(127,119,221,'+(0.3+(lam01-0.56)).toFixed(2)+')'; g.lineWidth=2; g.beginPath(); g.arc(CX,CY,RIN,0,TAU); g.stroke(); g.setLineDash([]); }
+  else if(lam01<0.44){ g.strokeStyle='rgba(216,90,48,'+(0.5+(0.44-lam01)).toFixed(2)+')'; g.lineWidth=2.5; g.beginPath(); g.arc(CX,CY,ROUT,0,TAU); g.stroke(); }
+
+  // подписи
+  g.fillStyle='rgba(147,160,180,0.9)'; g.font='11px system-ui'; g.textAlign='center';
+  g.fillText('коллапс', CX, CY+4);
+  g.fillText('вылет · распад', CX, CY-ROUT+14);
+
+  // след круговорота
+  if(path.length>1){
+    g.lineWidth=2;
+    for(var i=1;i<path.length;i++){
+      var a=path[i-1],b=path[i];
+      var x1=CX+a.r*Math.cos(a.th), y1=CY+a.r*Math.sin(a.th);
+      var x2=CX+b.r*Math.cos(b.th), y2=CY+b.r*Math.sin(b.th);
+      var al=i/path.length;
+      g.strokeStyle=colAt(b.r); g.globalAlpha=0.15+0.55*al;
+      g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+    }
+    g.globalAlpha=1;
+  }
+  // узлы-цифры
+  var startN=Math.max(0,path.length-90);
+  for(var j=startN;j<path.length;j++){
+    var p=path[j], x=CX+p.r*Math.cos(p.th), y=CY+p.r*Math.sin(p.th);
+    var al=(j-startN)/(path.length-startN||1);
+    g.globalAlpha=0.35+0.6*al; g.fillStyle=colAt(p.r);
+    g.beginPath(); g.arc(x,y,2.6,0,TAU); g.fill();
+  }
+  g.globalAlpha=1;
+
+  // голова со смайликом-цифрой
+  var h=path[path.length-1];
+  var hx=CX+h.r*Math.cos(h.th), hy=CY+h.r*Math.sin(h.th);
+  g.fillStyle=colAt(h.r); g.beginPath(); g.arc(hx,hy,11,0,TAU); g.fill();
+  g.fillStyle='#0a0c12'; g.font='bold 11px ui-monospace,monospace'; g.textAlign='center';
+  g.fillText(String(h.d),hx,hy+4);
+  // глазки-смайл
+  g.fillStyle='#0a0c12';
+  g.beginPath(); g.arc(hx-4,hy-3,1.3,0,TAU); g.arc(hx+4,hy-3,1.3,0,TAU); g.fill();
+
+  // вспышка бэктрекинга
+  if(flash>0){
+    var fr=flashOut?ROUT:RIN;
+    g.strokeStyle=flashOut?'rgba(216,90,48,'+(flash/10)+')':'rgba(127,119,221,'+(flash/10)+')';
+    g.lineWidth=3; g.beginPath();
+    g.arc(hx,hy,16-(10-flash),0,TAU); g.stroke();
+    flash--;
+  }
+}
+
+/* ---- гистограмма равнораспределения ---- */
+function drawHist(){
+  hg.clearRect(0,0,hc.width,hc.height);
+  var W=hc.width,H=hc.height,mx=1;
+  for(var i=0;i<HB;i++) if(hist[i]>mx) mx=hist[i];
+  var bw=W/HB;
+  for(var k=0;k<HB;k++){
+    var hh=(hist[k]/mx)*(H-14);
+    var t=k/HB;
+    hg.fillStyle=irr?'rgba(55,138,221,0.85)':'rgba(216,90,48,0.85)';
+    hg.fillRect(k*bw+0.5,H-hh-2,bw-1,hh);
+  }
+  var filled=0; for(var q=0;q<HB;q++) if(hist[q]>0) filled++;
+  hg.fillStyle='rgba(147,160,180,0.9)'; hg.font='10px system-ui'; hg.textAlign='left';
+  hg.fillText((irr?'ровно → ∞ ':'пики → застой ')+'('+filled+'/'+HB+')',4,11);
+}
+
+/* ---- спираль φ (филлотаксис), масштаб от λ ---- */
+function drawSpiral(){
+  sg.clearRect(0,0,sc.width,sc.height);
+  var W=sc.width,H=sc.height,cx=W/2,cy=H/2;
+  var lam01=+lam.value/100, GA=Math.PI*(3-Math.sqrt(5));
+  var f=0.35+(1-lam01)*1.25, N=170, px=5.2;
+  for(var n=1;n<=N;n++){
+    var ang=n*GA, rr=f*Math.sqrt(n)*px;
+    var x=cx+rr*Math.cos(ang), y=cy+rr*Math.sin(ang);
+    if(x<-4||x>W+4||y<-4||y>H+4) continue;
+    var fr=Math.min(1,rr/(W*0.5));
+    sg.fillStyle=RAMP[Math.min(5,Math.floor(fr*6))];
+    sg.globalAlpha=0.9; sg.beginPath(); sg.arc(x,y,2.1,0,TAU); sg.fill();
+  }
+  sg.globalAlpha=1;
+}
+
+/* ---- метрики ---- */
+function meters(){
+  var lam01=+lam.value/100, M=4*lam01*(1-lam01);
+  mval.textContent=M.toFixed(2); mbar.style.width=(M*100).toFixed(0)+'%';
+  per.textContent=irr?'∞ живой':'q=6 застой';
+  per.className=''; per.style.color=irr?'#1D9E75':'#D85A30';
+  bkEl.textContent=backtracks; dgEl.textContent=digitsUsed+(wrapped?' (демо-цикл)':'');
+  var h=path[path.length-1];
+  piEl.textContent='3.'+PI.slice(1, Math.min(PI.length, 2+ (digitsUsed%40) ))+'…';
+}
+
+/* ===== POV-режим (тот же прибор, что p74, встроенный) ===== */
+var povMode=false, povSweep=0, povDrift=0, povT=0, povPic='smiley', RIN_POV=14;
+var off=document.createElement('canvas'); off.width=420; off.height=420;
+var octx=off.getContext('2d'), IMG=null;
+var chaosDens=new Float32Array(420*420);   // буфер плотности для аттрактора
+var pdrift=$('pdrift'), ppers=$('ppers');
+
+function heartPath(ctx,cx,cy,s){
+  ctx.beginPath(); ctx.moveTo(cx,cy+55*s);
+  ctx.bezierCurveTo(cx-90*s,cy-20*s,cx-50*s,cy-80*s,cx,cy-35*s);
+  ctx.bezierCurveTo(cx+50*s,cy-80*s,cx+90*s,cy-20*s,cx,cy+55*s);
+  ctx.closePath();
+}
+function starShape(ctx,cx,cy,R,r,rot){
+  ctx.beginPath();
+  for(var i=0;i<10;i++){ var ang=rot+i*Math.PI/5, rad=(i%2?r:R);
+    var x=cx+rad*Math.cos(ang), y=cy+rad*Math.sin(ang); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.closePath();
+}
+function buildImg(ph){
+  var cx=210, cy=210;
+  if(povPic==='cave'){
+    octx.globalCompositeOperation='destination-out'; octx.fillStyle='rgba(0,0,0,0.05)'; octx.fillRect(0,0,420,420);
+    octx.globalCompositeOperation='source-over';
+    buildCave(); IMG=octx.getImageData(0,0,420,420).data; return;
+  }
+  octx.clearRect(0,0,420,420);
+  if(povPic==='smiley'){
+    octx.fillStyle='#EFB021'; octx.beginPath(); octx.arc(cx,cy,150,0,TAU); octx.fill();
+    var blink=(ph%1)<0.13; octx.fillStyle='#221a06';
+    if(blink){ octx.fillRect(cx-70,cy-42,44,9); octx.fillRect(cx+26,cy-42,44,9); }
+    else { octx.beginPath(); octx.arc(cx-48,cy-34,17,0,TAU); octx.arc(cx+48,cy-34,17,0,TAU); octx.fill(); }
+    octx.strokeStyle='#221a06'; octx.lineWidth=13; octx.lineCap='round';
+    if((ph%1)>0.55){ octx.fillStyle='#221a06'; octx.beginPath(); octx.arc(cx,cy+52,26,0,TAU); octx.fill(); }
+    else { octx.beginPath(); octx.arc(cx,cy+18,66,0.15*Math.PI,0.85*Math.PI); octx.stroke(); }
+  } else if(povPic==='heart'){
+    var s=1+0.17*Math.sin(ph*TAU*2); octx.fillStyle='#e0466f'; heartPath(octx,cx,cy-6,s); octx.fill();
+    octx.fillStyle='rgba(255,255,255,0.25)'; octx.beginPath(); octx.arc(cx-28*s,cy-30*s,14*s,0,TAU); octx.fill();
+  } else if(povPic==='star'){
+    var rot=ph*TAU, pulse=1+0.12*Math.sin(ph*TAU*3);
+    octx.fillStyle='#EF9F27'; starShape(octx,cx,cy,150*pulse,66*pulse,rot); octx.fill();
+    octx.fillStyle='#7F77DD'; starShape(octx,cx,cy,70*pulse,30*pulse,-rot); octx.fill();
+  } else if(povPic==='chaos'){
+    var T=povT*0.004;
+    var a=2.3*Math.sin(T*0.7)+0.3, b=-2.0*Math.cos(T*0.53), c=1.7*Math.sin(T*0.41+1.0), d=-2.2*Math.cos(T*0.31+2.0);
+    var dn=chaosDens; dn.fill(0);
+    var x=0.1,y=0.12, mx=0;
+    for(var k=0;k<120000;k++){                       // много точек → плотность
+      var nx=Math.sin(a*y)-Math.cos(b*x), ny=Math.sin(c*x)-Math.cos(d*y); x=nx; y=ny; if(k<80)continue;
+      var px=(210+x*98)|0, py=(210+y*98)|0; if(px<0||px>=420||py<0||py>=420)continue;
+      var idx=py*420+px, v=dn[idx]+1; dn[idx]=v; if(v>mx)mx=v;
+    }
+    var id=octx.createImageData(420,420), pd=id.data, lm=1/Math.log(1+mx); // тон-маппинг (лог)
+    for(var q=0;q<dn.length;q++){
+      var vv=dn[q]; if(vv===0) continue;
+      var t=Math.log(1+vv)*lm, e=q*4;                // огненная палитра: чёрн→красн→жёлт→бел
+      pd[e]  =255*Math.min(1,t*1.7);
+      pd[e+1]=255*Math.min(1,Math.max(0,t*1.7-0.45));
+      pd[e+2]=255*Math.min(1,Math.max(0,t*1.7-0.9));
+      pd[e+3]=255*Math.min(1,t*2.4);
+    }
+    octx.putImageData(id,0,0);
+  } else {
+    var by=cy+120-200*Math.abs(Math.sin(ph*TAU)), sq=1+0.18*Math.cos(ph*TAU*2);
+    octx.fillStyle='#2f2a1a'; octx.fillRect(cx-150,cy+150,300,8);
+    octx.fillStyle='#378ADD'; octx.beginPath(); octx.ellipse(cx,by,46/Math.sqrt(sq),46*Math.sqrt(sq),0,0,TAU); octx.fill();
+    octx.fillStyle='rgba(255,255,255,0.3)'; octx.beginPath(); octx.arc(cx-14,by-14,10,0,TAU); octx.fill();
+  }
+  IMG=octx.getImageData(0,0,420,420).data;
+}
+/* --- наскальный генератор: в основном хаос, иногда узнаваемый примитив --- */
+var caveFigs=[], CAVE_PAL=['#c8781f','#a83a2a','#e0a44a','#8a5a2a','#d9c39a'];
+var CAVE_TYPES=['human','deer','sun','hand','fish','spiral','bird'];
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function drawGlyph(ty,x,y,s,rot,col){
+  octx.save(); octx.translate(x,y); octx.rotate(rot);
+  octx.strokeStyle=col; octx.fillStyle=col; octx.lineWidth=Math.max(2,s*0.09); octx.lineCap='round'; octx.lineJoin='round';
+  var j=function(v){ return v+rnd(-s*0.05,s*0.05); };
+  if(ty==='human'){
+    octx.beginPath(); octx.arc(0,-s*0.7,s*0.16,0,TAU); octx.fill();
+    octx.beginPath(); octx.moveTo(j(0),-s*0.54); octx.lineTo(j(0),j(s*0.35)); octx.stroke();
+    octx.beginPath(); octx.moveTo(j(-s*0.4),j(-s*0.1)); octx.lineTo(0,-s*0.28); octx.lineTo(j(s*0.4),j(-s*0.1)); octx.stroke();
+    octx.beginPath(); octx.moveTo(j(-s*0.35),j(s*0.85)); octx.lineTo(0,s*0.35); octx.lineTo(j(s*0.35),j(s*0.85)); octx.stroke();
+  } else if(ty==='deer'){
+    octx.beginPath(); octx.ellipse(0,0,s*0.6,s*0.32,0,0,TAU); octx.fill();
+    for(var L=0;L<4;L++){ var lx=(-0.45+L*0.3)*s; octx.beginPath(); octx.moveTo(lx,s*0.22); octx.lineTo(j(lx),j(s*0.85)); octx.stroke(); }
+    octx.beginPath(); octx.moveTo(s*0.5,-s*0.08); octx.lineTo(s*0.92,-s*0.5); octx.stroke();
+    octx.beginPath(); octx.arc(s*0.97,-s*0.55,s*0.14,0,TAU); octx.fill();
+    octx.beginPath(); octx.moveTo(s*0.92,-s*0.66); octx.lineTo(s*1.02,-s*1.02); octx.moveTo(s*1.06,-s*0.62); octx.lineTo(s*1.22,-s*0.95); octx.stroke();
+  } else if(ty==='sun'){
+    octx.beginPath(); octx.arc(0,0,s*0.34,0,TAU); octx.stroke();
+    for(var R=0;R<10;R++){ var an=R*TAU/10; octx.beginPath(); octx.moveTo(Math.cos(an)*s*0.44,Math.sin(an)*s*0.44); octx.lineTo(Math.cos(an)*s*0.74,Math.sin(an)*s*0.74); octx.stroke(); }
+  } else if(ty==='hand'){
+    octx.beginPath(); octx.ellipse(0,s*0.28,s*0.28,s*0.34,0,0,TAU); octx.fill();
+    for(var F=0;F<5;F++){ var fa=(-0.5+F*0.25); octx.lineWidth=s*0.13; octx.beginPath(); octx.moveTo(fa*s*0.5,s*0.02); octx.lineTo(j(fa*s*0.72),j(-s*0.72)); octx.stroke(); }
+  } else if(ty==='fish'){
+    octx.beginPath(); octx.ellipse(0,0,s*0.6,s*0.28,0,0,TAU); octx.fill();
+    octx.beginPath(); octx.moveTo(s*0.55,0); octx.lineTo(s*0.95,-s*0.3); octx.lineTo(s*0.95,s*0.3); octx.closePath(); octx.fill();
+    octx.fillStyle='#2a2018'; octx.beginPath(); octx.arc(-s*0.3,-s*0.05,s*0.06,0,TAU); octx.fill();
+  } else if(ty==='spiral'){
+    octx.beginPath(); for(var t2=0;t2<7;t2+=0.14){ var rr=t2*s*0.09, px=Math.cos(t2)*rr, py=Math.sin(t2)*rr; t2?octx.lineTo(px,py):octx.moveTo(px,py);} octx.stroke();
+  } else {
+    octx.beginPath(); octx.moveTo(-s*0.5,0); octx.quadraticCurveTo(-s*0.2,-s*0.42,0,0); octx.quadraticCurveTo(s*0.2,-s*0.42,s*0.5,0); octx.stroke();
+  }
+  octx.restore();
+}
+function buildCave(){
+  for(var m=0;m<7;m++){                                   // хаотичные мазки
+    octx.strokeStyle=CAVE_PAL[(Math.random()*CAVE_PAL.length)|0]; octx.globalAlpha=rnd(0.12,0.45); octx.lineWidth=rnd(1,3);
+    var x0=rnd(30,390),y0=rnd(30,390); octx.beginPath(); octx.moveTo(x0,y0);
+    for(var q=0;q<3;q++){ x0+=rnd(-32,32); y0+=rnd(-32,32); octx.lineTo(x0,y0); } octx.stroke();
+  }
+  octx.globalAlpha=1;
+  if(Math.random()<0.10 && caveFigs.length<5){            // иногда — примитив
+    caveFigs.push({ty:CAVE_TYPES[(Math.random()*CAVE_TYPES.length)|0], x:rnd(95,325),y:rnd(95,325),
+      s:rnd(30,62), rot:rnd(-0.5,0.5), age:0, life:(rnd(70,150))|0, col:CAVE_PAL[(Math.random()*3)|0]});
+  }
+  for(var f=caveFigs.length-1;f>=0;f--){
+    var Fg=caveFigs[f]; Fg.age++;
+    var al=Math.min(1, Math.min(Fg.age/12,(Fg.life-Fg.age)/16));   // проявился → растворился
+    if(Fg.age>Fg.life){ caveFigs.splice(f,1); continue; }
+    if(al<=0) continue;
+    octx.globalAlpha=Math.max(0,al);
+    drawGlyph(Fg.ty, Fg.x, Fg.y, Fg.s, Fg.rot+Math.sin(Fg.age*0.05)*0.05, Fg.col);
+  }
+  octx.globalAlpha=1;
+}
+
+function sampleImg(sx,sy){
+  var ox=(sx-CX+210)|0, oy=(sy-CY+210)|0;
+  if(ox<0||ox>=420||oy<0||oy>=420) return null;
+  var i=(oy*420+ox)*4; if(IMG[i+3]<110) return null;
+  return 'rgb('+IMG[i]+','+IMG[i+1]+','+IMG[i+2]+')';
+}
+function povPaint(a){
+  var srcA=a-povDrift, ca=Math.cos(a),sa=Math.sin(a),cs=Math.cos(srcA),ss=Math.sin(srcA);
+  for(var r=RIN_POV;r<=ROUT;r+=2){
+    var col=sampleImg(CX+r*cs,CY+r*ss);
+    if(col){ g.fillStyle=col; g.fillRect(CX+r*ca-1.3,CY+r*sa-1.3,2.7,2.7); }
+  }
+}
+function povPoles(){
+  var well=g.createRadialGradient(CX,CY,0,CX,CY,RIN_POV+8);
+  well.addColorStop(0,'rgba(10,12,18,1)'); well.addColorStop(1,'rgba(10,12,18,0)');
+  g.fillStyle=well; g.beginPath(); g.arc(CX,CY,RIN_POV+8,0,TAU); g.fill();
+}
+function povEdge(){
+  g.setLineDash([3,5]); g.strokeStyle='rgba(216,90,48,0.4)'; g.lineWidth=1;
+  g.beginPath(); g.arc(CX,CY,ROUT,0,TAU); g.stroke(); g.setLineDash([]);
+}
+function povFrame(){
+  g.fillStyle='rgba(10,12,18,'+(ppers.value/100)+')'; g.fillRect(0,0,c.width,c.height);
+  povPoles();
+  if(running){
+    var ph=(povT*0.010)%1; if(povT%3===0) buildImg(ph); povT++;
+    var omega=spd.value*0.012; povDrift+=pdrift.value*0.0009;
+    var SUB=Math.max(3,Math.min(28,Math.ceil(omega/0.02)));
+    for(var s=1;s<=SUB;s++) povPaint(povSweep+omega*s/SUB);
+    povSweep+=omega;
+  }
+  povEdge();
+  g.strokeStyle='rgba(232,236,245,0.12)'; g.lineWidth=1; g.beginPath();
+  g.moveTo(CX+RIN_POV*Math.cos(povSweep),CY+RIN_POV*Math.sin(povSweep));
+  g.lineTo(CX+ROUT*Math.cos(povSweep),CY+ROUT*Math.sin(povSweep)); g.stroke();
+}
+
+/* ---- цикл ---- */
+function frame(){
+  if(povMode){ povFrame(); requestAnimationFrame(frame); return; }
+  if(running){
+    var n=+spd.value;
+    for(var i=0;i<n;i++) step();
+  }
+  draw(); drawHist(); drawSpiral(); meters();
+  requestAnimationFrame(frame);
+}
+
+/* ---- управление ---- */
+angBtn.onclick=function(){
+  irr=!irr; angBtn.textContent=irr?'угол: φ (иррац.)':'угол: 1/6 (рацион.)';
+  angBtn.classList.toggle('on',irr);
+  hist=new Int32Array(HB); histTot=0;
+  log(irr?'угол φ: движение непериодично, кольцо заполняется равномерно':'угол 1/6: период 6 — застреваем в 6 лучах (застой)', irr?'hg':'hb');
+};
+pauseBtn.onclick=function(){ running=!running; pauseBtn.textContent=running?'пауза':'пуск'; pauseBtn.classList.toggle('on',!running); };
+stepBtn.onclick=function(){ if(!running && !povMode){ step(); } };
+resetBtn.onclick=function(){ if(povMode){ povSweep=0; povDrift=0; povT=0; g.clearRect(0,0,c.width,c.height); } else seed(); };
+
+var modeBtn=$('mode');
+modeBtn.onclick=function(){
+  povMode=!povMode;
+  modeBtn.classList.toggle('on',povMode);
+  modeBtn.textContent=povMode?'● круговорот':'◐ POV-мультик';
+  $('vortexPanels').style.display=povMode?'none':'';
+  $('povPanels').style.display=povMode?'':'none';
+  g.clearRect(0,0,c.width,c.height);
+  if(povMode){ povSweep=0; povDrift=0; povT=0; buildImg(0); }
+};
+document.querySelectorAll('.pic').forEach(function(btn){
+  btn.onclick=function(){
+    document.querySelectorAll('.pic').forEach(function(x){x.classList.remove('on');});
+    btn.classList.add('on'); povPic=btn.dataset.p;
+    octx.clearRect(0,0,420,420); caveFigs.length=0;
+  };
+});
+lam.oninput=function(){
+  var l=+lam.value/100;
+  if(l>0.8) log('λ высок: рычаг тянет к центру — частые откаты у коллапса','hb');
+  else if(l<0.2) log('λ низок: рычаг тянет к краю — частые откаты у вылета','hr');
+};
+
+frame();
+})();
+</script>
+</body>
+</html>

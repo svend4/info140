@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п78 · Живое кольцо</title>
+<link rel="stylesheet" href="p78-living-ring-interface.css?v=1.3.1">
+<link rel="stylesheet" href="p78-formula-view.css?v=1.0.0">
+<link rel="stylesheet" href="p78-search-view.css?v=1.0.0">
+<link rel="stylesheet" href="p78-claim-view.css?v=1.0.0">
+<link rel="stylesheet" href="p78-evidence-candidate-view.css?v=1.0.1">
+<link rel="stylesheet" href="p78-evidence-backed-link-view.css?v=1.1.0">
+<link rel="stylesheet" href="p78-semantic-flow-view.css?v=1.1.1">
+</head>
+<body>
+<main class="app">
+  <header class="bar">
+    <div>
+      <h1>п78 · Живое кольцо</h1>
+      <div class="lead">Вводимое условие становится ветром в системе: обобщение тянет к 3D-ядру, уточнение и разбор тянут к внешнему 1D-краю, продолжение удерживает смысловой ход в жидком 2D-кольце.</div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <section class="stage">
+      <canvas id="world" width="1080" height="690" aria-label="Смысловое кольцо с ядром, теговым архипелагом и внешним распадом"></canvas>
+      <div class="controls">
+        <div class="inputRow">
+          <div class="conditionStack">
+            <textarea id="condition" spellcheck="true">Продолжить рассказ: мальчик нашел карту у реки, но дождь размыл дорогу. Нужно сохранить движение сюжета, добавить уточнение и не потерять главный смысл.</textarea>
+            <div class="goalInline">
+              <label for="goalTarget">цель</label>
+              <input id="goalTarget" type="text" value="" placeholder="гомеостаз, тема или слово">
+              <button id="goalCheck" type="button">проверить</button>
+            </div>
+          </div>
+          <button id="apply" class="primary">внести</button>
+          <button id="sample">пример</button>
+        </div>
+        <div class="tuning">
+          <label>λ <input id="lambda" type="range" min="1" max="99" value="50"></label>
+          <label>инерция <input id="inertia" type="range" min="0" max="100" value="62"></label>
+          <label>темп <input id="tempo" type="range" min="2" max="26" value="9"></label>
+          <button id="angle" class="on">φ-ход</button>
+          <button id="pause">пауза</button>
+          <button id="reset">сброс</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="dock">
+      <div class="dockMode" role="group" aria-label="режим интерфейса">
+        <button type="button" data-mode="flow" aria-pressed="true">ход</button>
+        <button type="button" data-mode="analysis" aria-pressed="false">анализ</button>
+      </div>
+
+      <section class="section" data-surface="shared">
+        <div class="label">ритм процесса</div>
+        <div id="chant" class="chant">круг<small>ход продолжается</small></div>
+        <div id="beats" class="beats"></div>
+      </section>
+
+      <section class="section" data-surface="shared">
+        <div class="label">реакция условия</div>
+        <div class="reaction">
+          <div class="line"><span>обобщение</span><b id="corePull">0.00</b></div>
+          <div class="line"><span>детализация</span><b id="edgePull">0.00</b></div>
+          <div class="line"><span>продолжение</span><b id="movePull">0.00</b></div>
+          <div class="line"><span>живость</span><b id="lifeScore">1.00</b></div>
+        </div>
+        <div id="reactionField" class="reactionField"></div>
+      </section>
+
+      <section class="section" data-surface="shared">
+        <div class="label">предохранитель</div>
+        <div id="guard" class="guardBox"></div>
+      </section>
+      <section id="resultFlow" class="section resultFlow" data-surface="shared">
+        <div class="label">следующий безопасный ход</div>
+        <div id="continuationProtocol" class="protocolBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">балансировка</div>
+        <div id="balance" class="balanceBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">внешний импульс</div>
+        <div class="impulseBox">
+          <textarea id="impulse" spellcheck="true">появился новый факт: мост закрыт шумом, но герой нашел карту
+разбить карту на буквы, слоги, детали и факты
+герой находит мост и продолжает путь</textarea>
+          <div class="impulseActions">
+            <button id="impulseCheck">проверить</button>
+            <button id="impulseApply" class="primary">применить</button>
+            <button id="impulseBest">лучший</button>
+          </div>
+          <div id="impulseResult" class="impulseResult"></div>
+        </div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">следующий ход</div>
+        <div id="continuation" class="continuation"></div>
+        <div class="composeActions">
+          <button id="composeRefresh">варианты</button>
+          <button id="composeBest" class="primary">вставить лучший</button>
+        </div>
+        <div id="composeResult" class="composeResult"></div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">текстовый вывод</div>
+        <div id="textResult" class="resultBox"></div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">контрфактическая λ</div>
+        <div id="parameterCounterfactual" class="counterfactualBox"></div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">соседние миры</div>
+        <div id="neighborWorlds" class="neighborWorlds">
+          <div class="neighborRoute" data-world="1d">
+            <b>1D · Pulse Tape</b>
+            <span>UTF-8 · binary · Morse</span>
+            <button type="button" data-open-world="1d">отправить снимок</button>
+            <small data-world-status="1d">ожидает запроса</small>
+          </div>
+          <div class="neighborRoute" data-world="3d">
+            <b>3D · Q6 Center</b>
+            <span>64 состояния · Hamming=1</span>
+            <button type="button" data-open-world="3d">открыть диагностику</button>
+            <small data-world-status="3d">ожидает запроса</small>
+          </div>
+          <div id="neighborReport" class="neighborReport">2D остаётся единственным арбитром текста.</div>
+        </div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">меню выводов</div>
+        <div id="outputMenu" class="outputMenu"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">прогноз хода</div>
+        <div id="forecast" class="forecast"></div>
+      </section>
+      <section class="section" data-surface="analysis">
+        <div class="label">память траектории</div>
+        <div id="trajectory" class="trajectory"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">портал-команда</div>
+        <div id="portal" class="portal"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">теговый архипелаг</div>
+        <div id="tags" class="tags"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">RAG-архипелаг</div>
+        <div id="archipelagoMap" class="archMap"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">смысловая сборка</div>
+        <div id="weaveMap" class="weaveBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">оконный ритм</div>
+        <div id="windowMap" class="windowBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">поиск с откатом</div>
+        <div id="backtrackMap" class="backtrackBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">цель-гомеостаз</div>
+
+        <div id="goalMap" class="goalBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">разумность Φ</div>
+        <div id="phiMap" class="phiBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">рельсы фразы</div>
+        <div id="railsMap" class="railsBox"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">семантический радар</div>
+        <div id="radar" class="radar"></div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">цепь RAG</div>
+        <div id="traceProof" class="proofTrace"></div>
+      </section>
+
+      <section class="section formulaSection" data-surface="analysis">
+        <div class="label">матрёшка формул</div>
+        <div class="formulaControls" aria-label="параметры формульного кольца">
+          <label title="Первая типизированная перекрёстная сила"><span>x</span><input id="formulaX" type="range" min="0" max="100" value="85"><output id="formulaXValue" for="formulaX">0.85</output></label>
+          <label title="Вторая типизированная перекрёстная сила"><span>y</span><input id="formulaY" type="range" min="0" max="100" value="20"><output id="formulaYValue" for="formulaY">0.20</output></label>
+        </div>
+        <div id="formulaTrace" class="formulaTrace" aria-live="polite">формульное ядро загружается</div>
+      </section>
+
+      <section class="section corridorSection" data-surface="analysis">
+        <div class="label">маргинальный коридор</div>
+        <div id="marginalCorridor" class="marginalCorridor" aria-live="polite">слои формы, грамматики и семантики загружаются</div>
+      </section>
+
+      <section class="section searchSection" data-surface="analysis">
+        <div class="label">двунаправленный индекс</div>
+        <div class="searchControls" aria-label="параметры локального поиска">
+          <label><span>точная фраза</span><input id="semanticSearchQuery" type="text" value="движение"></label>
+          <label><span>Formula AST</span><select id="semanticSearchFormula" aria-label="формула для структурного поиска"></select></label>
+          <button id="semanticSearchRun" type="button">проверить</button>
+        </div>
+        <div id="semanticSearchTrace" class="searchTrace" aria-live="polite">индексы загружаются</div>
+      </section>
+
+      <section class="section claimSection" data-surface="analysis">
+        <div class="label">Controlled Russian Claim AST</div>
+        <div class="claimControls" aria-label="параметры разбора утверждения">
+          <label><span>утверждение</span><input id="controlledClaimInput" type="text" value="Система сохраняет состояние."></label>
+          <button id="controlledClaimRun" type="button">разобрать</button>
+        </div>
+        <div id="controlledClaimTrace" class="claimTrace" aria-live="polite">языковой контракт загружается</div>
+        <div id="controlledClaimEvidence" class="claimEvidenceCandidates" aria-label="кандидаты источников">источниковые кандидаты не вычислены</div>
+        <div id="evidenceBackedLinkView" class="evidenceBackedLinkView" aria-label="доказательная связь">EVIDENCE-BACKED LINK · NOT_COMPUTED</div>
+        <div id="semanticFlowView" class="semanticFlowView" aria-label="2D semantic flow">2D flow: NOT_COMPUTED</div>
+      </section>
+
+
+      <section class="section" data-surface="analysis">
+        <div class="label">прибор</div>
+        <div class="meters">
+          <div class="meter"><span>M(λ)</span><b id="mval">1.00</b><div class="rail"><i id="mbar"></i></div></div>
+          <div class="meter"><span>угол</span><b id="aval">φ</b></div>
+          <div class="meter"><span>центр</span><b id="core">0</b></div>
+          <div class="meter"><span>край</span><b id="edge">0</b></div>
+          <div class="meter"><span>SemFit</span><b id="fitVal">0.00</b></div>
+          <div class="meter"><span>LCA</span><b id="lcaVal">0.00</b></div>
+          <div class="meter"><span>g↔</span><b id="gLinkVal">0.00</b></div>
+          <div class="meter"><span>конфликты</span><b id="conflictVal">0</b></div>
+        </div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">словарь картинки</div>
+        <div class="legend">
+          <b>ядро</b><span>обобщить, сжать, назвать одним словом</span>
+          <b>край</b><span>разбить, уточнить, слоги, буквы, детали</span>
+          <b>мост</b><span>дальше, связать, продолжить, сюжет</span>
+          <b>остров</b><span>тег из введенного условия</span>
+          <b>ряд</b><span>следующий осмысленный ход</span>
+        </div>
+      </section>
+
+      <section class="section" data-surface="analysis">
+        <div class="label">события</div>
+        <div id="events" class="events"></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<script src="lib/semantic-language.js?v=1.0.0"></script>
+<script src="lib/semantic-core.js?v=1.10.0"></script>
+<script src="lib/semantic-data-evidence.js?v=1.0.0"></script>
+<script src="lib/semantic-reaction-rules.js?v=1.1.0"></script>
+<script src="lib/semantic-reaction-field.js?v=1.2.0"></script>
+<script src="lib/semantic-reaction-runtime.js?v=2.6.0"></script>
+<script src="lib/semantic-reaction-field-view.js?v=1.8.0"></script>
+<script src="lib/semantic-trace-continuation.js?v=1.2.0"></script>
+<script src="lib/semantic-trace-view.js?v=1.0.0"></script>
+<script src="lib/semantic-parameter-counterfactual.js?v=1.0.0"></script>
+<script src="lib/semantic-parameter-view.js?v=1.0.0"></script>
+<script src="lib/text-result.js?v=1.13.0"></script>
+<script src="lib/output-menu.js?v=1.3.0"></script>
+<script src="lib/semantic-output-view.js?v=1.0.0"></script>
+<script src="lib/continuation-protocol.js?v=1.0.0"></script>
+<script src="lib/semantic-branch-evaluator.js?v=1.1.0"></script>
+<script src="lib/semantic-command-dsl.js?v=1.0.0"></script>
+<script src="lib/semantic-transaction.js?v=1.0.0"></script>
+<script src="lib/semantic-ledger.js?v=1.0.0"></script>
+<script src="lib/semantic-decision.js?v=1.4.0"></script>
+<script src="lib/semantic-action-gate.js?v=1.0.0"></script>
+<script src="lib/semantic-decision-view.js?v=1.6.0"></script>
+<script src="lib/p78-canonical-json.js?v=1.0.0"></script>
+<script src="lib/p78-search-contracts.js?v=1.0.0"></script>
+<script src="lib/p78-controlled-russian-lexicon.js?v=1.0.0"></script>
+<script src="lib/p78-claim-ir.js?v=1.0.0"></script>
+<script src="lib/p78-linguistic-parser-adapter.js?v=1.1.0"></script>
+<script src="lib/p78-claim-structural-matcher.js?v=1.0.1"></script>
+<script src="lib/p78-controlled-claim-engine.js?v=1.0.2"></script>
+<script src="lib/p78-local-text-index.js?v=1.0.0"></script>
+<script src="lib/p78-evidence-contracts.js?v=1.0.0"></script>
+<script src="lib/p78-claim-evidence-corpus.js?v=1.0.0"></script>
+<script src="lib/p78-linguistic-structure-index.js?v=1.0.1"></script>
+<script src="lib/p78-claim-evidence-cascade.js?v=1.0.0"></script>
+<script src="lib/p78-alpha-orbit-contracts.js?v=1.0.0"></script>
+<script src="lib/p78-data7-adapter.js?v=1.0.0"></script>
+<script src="lib/p78-qualifier-direction-contracts.js?v=2.1.0"></script>
+<script src="lib/p78-evidence-backed-link-adapter.js?v=1.4.0"></script>
+<script src="lib/p78-evidence-backed-link-projector.js?v=1.1.0"></script>
+<script src="lib/p78-evidence-backed-link-view.js?v=1.1.0"></script>
+<script src="lib/p78-evidence-backed-link-runner.js?v=1.0.0"></script>
+<script src="lib/p78-search-corpus.js?v=1.0.0"></script>
+<script src="lib/p78-formula-registry.js?v=1.0.0"></script>
+<script src="lib/p78-formula-engine.js?v=1.0.0"></script>
+<script src="lib/p78-formula-shape-index.js?v=1.0.0"></script>
+<script src="lib/p78-formula-structural-matcher.js?v=1.0.0"></script>
+<script src="lib/p78-query-projector.js?v=1.0.0"></script>
+<script src="lib/p78-bidirectional-retrieval.js?v=1.0.0"></script>
+<script src="lib/p78-search-view.js?v=1.0.0"></script>
+<script src="lib/p78-search-adapter.js?v=1.0.0"></script>
+<script src="lib/p78-claim-view.js?v=1.0.0"></script>
+<script src="lib/p78-evidence-candidate-view.js?v=1.0.1"></script>
+<script src="lib/p78-semantic-work-contracts.js?v=1.0.1"></script>
+<script src="lib/p78-semantic-flow-reducer.js?v=1.1.0"></script>
+<script src="lib/p78-semantic-flow-view.js?v=1.1.0"></script>
+<script src="lib/p78-claim-adapter.js?v=1.0.0"></script>
+<script src="lib/p78-formula-view.js?v=1.0.0"></script>
+<script src="lib/p78-marginal-corridor.js?v=1.1.0"></script>
+<script src="lib/p78-marginal-corridor-view.js?v=1.0.1"></script>
+<script src="lib/p78-formula-adapter.js?v=1.0.0"></script>
+<script src="lib/p78-exchange-contract.js?v=1.0.0"></script>
+<script src="lib/p78-runtime-state.js?v=1.2.0"></script>
+<script src="lib/p78-reaction-kernel.js?v=1.0.0"></script>
+<script src="lib/p78-semantic-action-controller.js?v=1.0.0"></script>
+<script src="lib/p78-interface-mode.js?v=1.0.0"></script>
+<script src="lib/p78-neighbor-worlds.js?v=1.0.1"></script>
+<script src="lib/p78-living-ring-runtime.js?v=1.10.0"></script>
+</body>
+</html>

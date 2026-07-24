@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Резонанс» (bullet-hell)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:560px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:440px;border:1px solid var(--border);border-radius:12px;cursor:crosshair}
+.lam{display:flex;align-items:center;gap:10px;margin-top:12px}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 14px;font-size:13px}
+.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — «Резонанс» (bullet-hell)</div>
+<div class="sub">кораблик за курсором; λ настраивает полярность. Синие пули λ≈0.25, коралловые λ≈0.75 — лови «свои» по резонансу, остальные не тронь</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam"><span class="stat" style="color:#378ADD">синие 0.25</span>
+<input id="mrd-lambda" type="range" min="0.02" max="0.98" step="0.01" value="0.5">
+<span class="stat" style="color:#D85A30">коралл 0.75</span></div>
+<div class="row"><button class="btn" id="mrd-reset">↻ заново</button><button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat">λ: <b id="mrd-lam">0.50</b></span><span class="stat">очки: <b id="mrd-score">0</b></span><span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat">время: <b id="mrd-time">0</b>с</span><span class="stat">здоровье: <b id="mrd-hp">100</b></span></div>
+<div class="note">Края λ (&lt;0.12 и &gt;0.88) — зоны смерти, тикают урон. Файл: prototype/p12-resonance.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var W=0,H=0,px=0,py=0,lam=0.5,bul=[],hp=100,score=0,tsec=0,ea=0,rotb=0,last=0,over=false;
+var hiBest=FX.best('meridian_resonance_best');
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA',c:'#3A3A3C'}:{ui:'#2C2C2A',c:'#E0DED7'};}
+function colP(p){return p<0.5?'#378ADD':'#D85A30';}
+function pcol(){var r=Math.round(55+200*lam),b=Math.round(255-200*lam);return 'rgb('+r+',120,'+b+')';}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||520;H=r.height||440;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);if(!px){px=W/2;py=H/2;}}
+function reset(){bul=[];hp=100;score=0;tsec=0;ea=0;over=false;}
+function emit(){rotb+=0.4;var K=14,cx=W/2,cy=H/2;for(var k=0;k<K;k++){var a=rotb+k/K*TAU,sp=70+Math.random()*30,p=(k%2)?0.75:0.25;
+ bul.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,p:p});}}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var _M=4*lam*(1-lam);FX.ambient(0.03*_M);FX.freq(110+lam*150);
+ if(!over){tsec+=dt;ea+=dt;if(ea>=1.05){ea=0;emit();}
+  if(lam<0.12||lam>0.88)hp-=8*dt;
+  for(var i=bul.length-1;i>=0;i--){var b=bul[i];b.x+=b.vx*dt;b.y+=b.vy*dt;
+   if(b.x<-20||b.x>W+20||b.y<-20||b.y>H+20){bul.splice(i,1);continue;}
+   var dx=b.x-px,dy=b.y-py;if(dx*dx+dy*dy<260){if(Math.abs(lam-b.p)<0.16){score+=5;FX.blip(660,0.05);if(score>hiBest)hiBest=FX.best('meridian_resonance_best',score);}else{hp-=12;FX.blip(200,0.05,'sawtooth');}bul.splice(i,1);}}
+  if(hp<=0){hp=0;over=true;FX.blip(110,0.09,'sawtooth');}}
+ draw();hud();requestAnimationFrame(loop);}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);
+ ctx.fillStyle='#E24B4A';ctx.globalAlpha=0.10;if(lam<0.12)ctx.fillRect(0,0,W,H);if(lam>0.88)ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
+ ctx.fillStyle=t.c;ctx.beginPath();ctx.arc(W/2,H/2,7,0,TAU);ctx.fill();
+ for(var i=0;i<bul.length;i++){var b=bul[i];ctx.fillStyle=colP(b.p);ctx.beginPath();ctx.arc(b.x,b.y,6,0,TAU);ctx.fill();}
+ ctx.fillStyle=pcol();ctx.strokeStyle=t.ui;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,10,0,TAU);ctx.fill();ctx.stroke();
+ if(over){ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 18px system-ui';ctx.fillText('Поражение · очки '+score+', '+tsec.toFixed(0)+'с',W/2,H/2);ctx.font='13px system-ui';ctx.fillText('нажми «заново»',W/2,H/2+22);ctx.textAlign='start';}}
+function hud(){var e;e=document.getElementById('mrd-lam');if(e)e.textContent=lam.toFixed(2);
+ e=document.getElementById('mrd-score');if(e)e.textContent=score;e=document.getElementById('mrd-time');if(e)e.textContent=tsec.toFixed(0);
+ e=document.getElementById('mrd-hp');if(e)e.textContent=Math.ceil(hp);
+ var _be=document.getElementById('mrd-best');if(_be)_be.textContent=Math.round(hiBest);}
+cvs.addEventListener('mousemove',function(e){var r=cvs.getBoundingClientRect();px=e.clientX-r.left;py=e.clientY-r.top;});
+cvs.addEventListener('touchmove',function(e){var r=cvs.getBoundingClientRect();px=e.touches[0].clientX-r.left;py=e.touches[0].clientY-r.top;},{passive:true});
+document.getElementById('mrd-reset').onclick=reset;
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+var lb=document.getElementById('mrd-lambda');lb.oninput=function(){lam=parseFloat(lb.value);};
+addEventListener('resize',rz);rz();requestAnimationFrame(loop);})();
+</script></body></html>

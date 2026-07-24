@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Лестница представлений (число→формула→теорема→слово)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-prof{display:block;width:100%;height:160px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tab{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:7px;padding:5px 11px;font-size:12px}.tab.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1)}
+.steps{display:flex;gap:6px;margin-top:8px}
+.step{flex:1;cursor:pointer;border:1.5px solid var(--border);background:var(--surface-2);border-radius:9px;padding:8px 6px;text-align:center}
+.step.on{border-color:#1D9E75;background:var(--surface-1)}.step .n{font-size:13px;font-weight:600}.step .s{font-size:10px;color:var(--text-muted);margin-top:1px}
+.step.mid{box-shadow:inset 0 0 0 2px rgba(29,158,117,.15)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.render{font-size:16px;min-height:30px;line-height:1.5}.render.mono{font-family:var(--mono);font-size:17px}
+.comp{display:flex;height:16px;border-radius:5px;overflow:hidden;margin-top:6px;border:1px solid var(--border)}
+.comp .dig{background:#378ADD}.comp .let{background:#EF9F27}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:160px}
+.bar{height:9px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:220px}.bar>i{display:block;height:100%;background:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Лестница представлений</div>
+<div class="sub">середина между числом и словом — это не одна точка, а два уровня: ФОРМУЛА (мало букв, много цифр) и ТЕОРЕМА (много слов, мало цифр). Их смысл держится на ВЕРИФИЦИРУЕМОСТИ — их можно перепроверить</div>
+<canvas id="mrd-prof"></canvas>
+<div class="tabs" id="mrd-conc"></div>
+<div class="steps" id="mrd-steps"></div>
+<div class="panel"><h3 id="mrd-rh">Представление</h3><div class="render" id="mrd-render">—</div>
+<div class="comp" id="mrd-comp"></div><div id="mrd-compl" style="font-size:12px;color:var(--text-muted);margin-top:3px"></div></div>
+<div class="panel"><h3>Показатели уровня</h3><div id="mrd-met">—</div></div>
+<div class="note">① ЧИСЛО — чистая математика (полюс λ→0). ② ФОРМУЛА — «химия чисел», вычислимо. ③ ТЕОРЕМА — доказуемое, перепроверяемое утверждение. ④ СЛОВО — грамматика/речь (полюс λ→1). Средний слой (② и ③, зелёный) = команды-порталы: ими удобно оперировать как блоками высокоуровневого языка. Верифицируемость пикует на формуле/теореме. Полная спецификация — docs/13 (Меридо) и docs/14 (лестница), считаются роем. Файл: prototype/p43-representation-ladder.html</div>
+</div><script>
+(function(){
+var LV=['num','form','theo','word'];
+var NM=['① ЧИСЛО','② ФОРМУЛА','③ ТЕОРЕМА','④ СЛОВО'];
+var SUB=['математика','химия чисел','доказуемо','речь'];
+var P=[1.0,0.8,0.55,0.3],S=[0.18,0.45,0.75,1.0],V=[0.5,0.95,0.9,0.35],LAM=[0.08,0.38,0.62,0.92];
+var CONC={
+ 'велосипед':{num:'2.07.3',form:'Кл2·Рм1·Цп1·Пд2',theo:'Теорема: если 2 колеса (Кл) скреплены рамой (Рм) и приводятся цепью (Цп) от 2 педалей (Пд), то при скорости v>0 система катится, сохраняя равновесие.',word:'Велосипед — двухколёсное средство передвижения: человек крутит педали, цепь вращает колесо, и машина едет по дороге, послушная рулю и равновесию седока.'},
+ 'смысл':{num:'4.01.0',form:'M(λ)=4λ(1−λ)',theo:'Теорема: мера смысла M(λ)=4λ(1−λ) достигает максимума 1 при λ=0.5 и обращается в 0 на полюсах λ→0 (дробление) и λ→1 (обобщение).',word:'Смысл живёт между двумя гибелями — распадом на шум и схлопыванием в одно; он держится в живой середине, где есть и различие, и связь.'},
+ 'движение':{num:'2.02.1',form:'v=Δs/Δt',theo:'Теорема: путь есть интеграл скорости по времени, s=∫v·dt; при v>0 накопление пути монотонно возрастает.',word:'Движение — это непрерывная смена положения во времени: то, что не стоит на месте и продолжается, не зная конца.'}
+};
+var CK=Object.keys(CONC),ci=0,li=1;
+function txt(){return CONC[CK[ci]][LV[li]];}
+function comp(s){var dig=(s.match(/[0-9]/g)||[]).length;var let=(s.match(/[A-Za-zА-Яа-яЁёΑ-Ωα-ω]/g)||[]).length;var tot=dig+let||1;return {dig:dig,let:let,df:dig/tot,lf:let/tot};}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function prof(){var c=document.getElementById('mrd-prof');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||160;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var x0=20,x1=W-20,y0=24,y1=H-30;
+ function X(i){return x0+(i/3)*(x1-x0);}function Y(v){return y1-v*(y1-y0);}
+ // средний слой (формула+теорема)
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.10;ctx.fillRect(X(0.6),y0-6,X(2.4)-X(0.6),y1-y0+12);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.stroke();
+ function pl(arr,col){ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();for(var i=0;i<4;i++){if(i===0)ctx.moveTo(X(i),Y(arr[i]));else ctx.lineTo(X(i),Y(arr[i]));}ctx.stroke();for(i=0;i<4;i++){ctx.fillStyle=col;ctx.beginPath();ctx.arc(X(i),Y(arr[i]),2.5,0,6.283);ctx.fill();}}
+ pl(P,'#378ADD');pl(S,'#EF9F27');pl(V,'#1D9E75');
+ var mx=X(li);ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(mx,y0-6);ctx.lineTo(mx,y1);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle=uic;ctx.font='10px system-ui';ctx.textAlign='center';for(var i=0;i<4;i++){ctx.fillStyle=(i===li)?'#1D9E75':uic;ctx.fillText(NM[i].replace(/[①②③④] /,''),X(i),H-16);ctx.fillStyle=uic;ctx.fillText('λ='+LAM[i].toFixed(2),X(i),H-4);}
+ ctx.textAlign='left';ctx.fillStyle='#378ADD';ctx.fillText('точность',x0+2,y0+2);ctx.fillStyle='#EF9F27';ctx.fillText('понятность',x0+2,y0+14);ctx.fillStyle='#1D9E75';ctx.fillText('верифицируемость',x0+2,y0+26);ctx.textAlign='start';}
+function render(){prof();var s=txt();var mono=(li<=1)?' mono':'';
+ var e=document.getElementById('mrd-rh');if(e)e.textContent=NM[li]+' · '+SUB[li]+' — «'+CK[ci]+'»';
+ e=document.getElementById('mrd-render');if(e){e.className='render'+mono;e.textContent=s;}
+ var cm=comp(s);e=document.getElementById('mrd-comp');if(e)e.innerHTML='<div class="dig" style="width:'+(cm.df*100)+'%"></div><div class="let" style="width:'+(cm.lf*100)+'%"></div>';
+ e=document.getElementById('mrd-compl');if(e)e.innerHTML='<span style="color:#378ADD">цифры '+Math.round(cm.df*100)+'%</span> · <span style="color:#EF9F27">буквы '+Math.round(cm.lf*100)+'%</span> (цифр '+cm.dig+', букв '+cm.let+')';
+ function brow(l,v,cc){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(v*100)+'%;background:'+cc+'"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+ var mid=(li===1||li===2);
+ e=document.getElementById('mrd-met');if(e)e.innerHTML=brow('точность',P[li],'#378ADD')+brow('понятность',S[li],'#EF9F27')+brow('верифицируемость',V[li],'#1D9E75')+'<div style="margin-top:3px">'+(mid?'<b style="color:#1D9E75">средний слой: команда-портал (логический блок, перепроверяемо)</b>':(li===0?'<b style="color:#378ADD">полюс: чистое число (точно, но без смысла)</b>':'<b style="color:#EF9F27">полюс: чистое слово (понятно, но не перепроверить)</b>'))+'</div>';}
+function buildTabs(){var t=document.getElementById('mrd-conc');for(var i=0;i<CK.length;i++){(function(k){var b=document.createElement('div');b.className='tab'+(k===0?' on':'');b.textContent=CK[k];b.onclick=function(){ci=k;var ch=t.children;for(var j=0;j<ch.length;j++)ch[j].className='tab'+(j===k?' on':'');render();};t.appendChild(b);})(i);}
+ var st=document.getElementById('mrd-steps');for(i=0;i<4;i++){(function(k){var b=document.createElement('div');b.className='step'+(k===li?' on':'')+((k===1||k===2)?' mid':'');b.innerHTML='<div class="n">'+NM[k]+'</div><div class="s">'+SUB[k]+'</div>';b.onclick=function(){li=k;var ch=st.children;for(var j=0;j<ch.length;j++)ch[j].className='step'+(j===k?' on':'')+((j===1||j===2)?' mid':'');render();};st.appendChild(b);})(i);}}
+window.addEventListener('resize',prof);buildTabs();render();
+})();
+</script></body></html>

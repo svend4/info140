@@ -1,0 +1,49 @@
+<svg width="100%" viewBox="0 0 680 475" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Орбиты-оболочки инфонов</title>
+<desc>Концентрические орбиты как оболочки обобщённости: к центру более общие классы C5, к краю более дробные C0, с границей системы и легендой классов.</desc>
+<style>
+text{font-family:'Anthropic Sans',system-ui,'Segoe UI',Roboto,sans-serif}
+.mt{font-size:14px;fill:#2C2C2A}.mts{font-size:12px;fill:#5F5E5A}.mth{font-size:14px;font-weight:500;fill:#2C2C2A}.mttl{font-size:16px;font-weight:500;fill:#2C2C2A}
+.mdash{stroke:#B4B2A9;stroke-width:1;stroke-dasharray:5 4;fill:none}
+@media (prefers-color-scheme:dark){
+.mt{fill:#E8E8EA}.mts{fill:#B4B2A9}.mth{fill:#E8E8EA}.mttl{fill:#F1EFE8}
+.mdash{stroke:#5F5E5A}
+}
+</style>
+<text class="mttl" x="40" y="30">Орбиты-оболочки: геометрия классов инфонов</text>
+<text class="mts" x="40" y="50">к центру — обобщение (общие классы), к краю — дробление (частные)</text>
+<circle cx="230" cy="250" r="182" class="mdash"/>
+<line class="mdash" x1="230" y1="250" x2="230" y2="85"/>
+<circle cx="230" cy="250" r="165" fill="none" stroke="#D85A30" stroke-width="2"/>
+<circle cx="230" cy="250" r="138" fill="none" stroke="#EF9F27" stroke-width="2"/>
+<circle cx="230" cy="250" r="111" fill="none" stroke="#639922" stroke-width="2"/>
+<circle cx="230" cy="250" r="84" fill="none" stroke="#1D9E75" stroke-width="2"/>
+<circle cx="230" cy="250" r="57" fill="none" stroke="#378ADD" stroke-width="2"/>
+<circle cx="230" cy="250" r="30" fill="none" stroke="#7F77DD" stroke-width="2"/>
+<circle cx="230" cy="85" r="6" fill="#D85A30"/>
+<circle cx="230" cy="112" r="6" fill="#EF9F27"/>
+<circle cx="230" cy="139" r="6" fill="#639922"/>
+<circle cx="230" cy="166" r="6" fill="#1D9E75"/>
+<circle cx="230" cy="193" r="6" fill="#378ADD"/>
+<circle cx="230" cy="250" r="8" fill="#7F77DD"/>
+<text class="mth" x="430" y="92">Классы по оболочкам</text>
+<rect x="430" y="110" width="16" height="16" rx="3" fill="#7F77DD"/>
+<text class="mth" x="454" y="118">C5 — ядро-энциклопедия</text>
+<text class="mts" x="454" y="134">самое общее · центр</text>
+<rect x="430" y="152" width="16" height="16" rx="3" fill="#378ADD"/>
+<text class="mth" x="454" y="160">C4 — порталы</text>
+<text class="mts" x="454" y="176">подборки, разделы</text>
+<rect x="430" y="194" width="16" height="16" rx="3" fill="#1D9E75"/>
+<text class="mth" x="454" y="202">C3 — статьи / темы</text>
+<text class="mts" x="454" y="218">связные тексты</text>
+<rect x="430" y="236" width="16" height="16" rx="3" fill="#639922"/>
+<text class="mth" x="454" y="244">C2 — блоки / фразы</text>
+<text class="mts" x="454" y="260">группы слов</text>
+<rect x="430" y="278" width="16" height="16" rx="3" fill="#EF9F27"/>
+<text class="mth" x="454" y="286">C1 — слова</text>
+<text class="mts" x="454" y="302">единицы языка</text>
+<rect x="430" y="320" width="16" height="16" rx="3" fill="#D85A30"/>
+<text class="mth" x="454" y="328">C0 — кванты / буквы</text>
+<text class="mts" x="454" y="344">самое дробное · край</text>
+<text class="mts" x="230" y="455" text-anchor="middle">пунктир — граница системы (инфоны её не покидают) · центр-бинду недостижим</text>
+</svg>

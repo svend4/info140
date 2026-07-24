@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Рой-составитель фраз</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:380px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.65;color:var(--text-secondary)}.log b{color:var(--text-primary);font-weight:600}
+.found{font-size:13px;line-height:1.7}.found b{font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Рой-составитель фраз</div>
+<div class="sub">кооперация агентов: существительное объявляет сборку, зовёт глагол/прилагательное СВОЕЙ темы; собранная фраза проходит проверку — осмысленная кристаллизуется, бессвязная распадается. Рой «выясняет» фразы сам</div>
+<canvas id="mrd-c"></canvas>
+<div class="panel"><h3>Выяснено роем (принятые фразы)</h3><div class="found" id="mrd-found">—</div></div>
+<div class="panel"><h3>Журнал сборок</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ рой работает</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label>
+<label>порог Score <input id="mrd-th" type="range" min="0.3" max="0.8" step="0.05" value="0.55"></label></div>
+<div class="note">Каждый агент решает сам: кандидат соглашается лететь в сборку, только если разделяет тему ядра (иначе отказ — тоже в журнале). Оценка честная: Score = 0.45·M(λ) + 0.55·связность (тег-косинус соседей); порог задаёте вы. Слова после сборки возвращаются в рой — население сохраняется. Файл: prototype/p53-phrase-swarm.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var N=[['город',1,'m','г'],['улица',1,'f','гд'],['поезд',1,'m','гд'],['мост',1,'m','г'],['свет',2,'m','с'],['огонь',2,'m','с'],['путь',2,'m','дм'],['окраина',2,'f','г'],['слово',3,'n','м'],['тишина',3,'f','в'],['мысль',4,'f','мв'],['время',4,'n','в'],['река',2,'f','пд'],['сад',2,'m','п'],['заря',2,'f','с'],['идея',4,'f','м']];
+var A=[['тёмн','ый',2,'с'],['светл','ый',2,'с'],['быстр','ый',1,'д'],['тих','ий',2,'в'],['жив','ой',3,'п'],['ясн','ый',3,'см'],['вечн','ый',5,'в'],['плотн','ый',2,'г']];
+var V=[['течёт',2,'дп'],['кружит',2,'д'],['ведёт',2,'д'],['горит',2,'с'],['молчит',3,'в'],['дышит',3,'п'],['рождает',3,'м'],['ищет',3,'м'],['связывает',3,'мг']];
+var D=[['быстро',1,'д'],['медленно',2,'д'],['тихо',2,'в'],['ярко',2,'с'],['вечно',5,'в'],['ясно',3,'м']];
+function mk(){var arr=[];var i;
+ for(i=0;i<N.length;i++)arr.push({cat:'NOUN',w:N[i][0],lv:N[i][1],g:N[i][2],tg:N[i][3].split('')});
+ for(i=0;i<A.length;i++)arr.push({cat:'ADJ',stem:A[i][0],mend:A[i][1],lv:A[i][2],tg:A[i][3].split('')});
+ for(i=0;i<V.length;i++)arr.push({cat:'VERB',w:V[i][0],lv:V[i][1],tg:V[i][2].split('')});
+ for(i=0;i<D.length;i++)arr.push({cat:'ADV',w:D[i][0],lv:D[i][1],tg:D[i][2].split('')});
+ return arr;}
+function adjF(a,g){return g==='f'?a.stem+'ая':g==='n'?a.stem+'ое':a.stem+a.mend;}
+function wtxt(ag,g){return ag.cat==='ADJ'?adjF(ag,g||'m'):ag.w;}
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+var TMPL=[['ADJ','NOUN','VERB'],['NOUN','VERB','ADV'],['ADJ','NOUN','VERB','ADV']];
+var AG=[],mol=null,found=[],logL=[],run=true,spd=3,th=0.55,acc=0,last=0,Wc=640,Hc=380;
+function reset(){AG=[];var base=mk();for(var i=0;i<base.length;i++){var a=base[i];a.x=30+Math.random()*(Wc-60);a.y=50+Math.random()*(Hc-90);a.vx=(Math.random()-0.5)*40;a.vy=(Math.random()-0.5)*40;a.st='free';AG.push(a);}mol=null;found=[];logL=[];}
+function addLog(s){logL.unshift(s);if(logL.length>5)logL.pop();}
+function freeOf(cat){var o=[];for(var i=0;i<AG.length;i++)if(AG[i].st==='free'&&AG[i].cat===cat)o.push(AG[i]);return o;}
+function startMol(){var nouns=freeOf('NOUN');if(!nouns.length)return;
+ var seed=nouns[Math.floor(Math.random()*nouns.length)];
+ var tm=TMPL[Math.floor(Math.random()*TMPL.length)];
+ mol={tm:tm,slots:[],seed:seed,age:0};
+ for(var s=0;s<tm.length;s++){
+  if(tm[s]==='NOUN'){mol.slots.push(seed);seed.st='mol';continue;}
+  var cands=freeOf(tm[s]);var best=null,bs=-1;
+  for(var i=0;i<cands.length;i++){var c=cos(cands[i].tg,seed.tg);
+   if(c<=0&&Math.random()<0.8){continue;} // личный отказ: чужая тема
+   var sc=c+Math.random()*0.15;if(sc>bs){bs=sc;best=cands[i];}}
+  if(best){mol.slots.push(best);best.st='mol';}
+  else {addLog('✋ сборка «'+seed.w+'»: никто из '+tm[s]+' не согласился (чужие темы)');dropMol();return;}}
+ addLog('🧲 «'+seed.w+'» объявил сборку: '+tm.join('+'));FX.blip(500,0.04);}
+function dropMol(){if(!mol)return;for(var i=0;i<mol.slots.length;i++)mol.slots[i].st='free';mol=null;}
+function phraseOf(){var g='m';for(var i=0;i<mol.slots.length;i++)if(mol.slots[i].cat==='NOUN')g=mol.slots[i].g;
+ var o=[];for(i=0;i<mol.slots.length;i++)o.push(wtxt(mol.slots[i],g));return o.join(' ');}
+function judge(){var ws=mol.slots;var s=0;for(var i=0;i<ws.length;i++)s+=ws[i].lv;var lam=Math.max(0.02,Math.min(0.98,(s/ws.length)/5));
+ var pairs=0,co=0;for(i=0;i<ws.length-1;i++){pairs++;co+=cos(ws[i].tg,ws[i+1].tg);}var coh=pairs?co/pairs:0;
+ var M=4*lam*(1-lam);return {sc:0.45*M+0.55*coh,lam:lam,coh:coh};}
+function finishMol(){var ph=phraseOf();var m=judge();
+ if(m.sc>=th){found.unshift({ph:ph,sc:m.sc,lam:m.lam});if(found.length>6)found.pop();
+  addLog('🧩 <b>«'+ph+'»</b> — Score '+m.sc.toFixed(2)+' ≥ '+th.toFixed(2)+' · <b style="color:#1D9E75">принято</b>');FX.chord([523,659,784],0.06);}
+ else {addLog('✗ «'+ph+'» — Score '+m.sc.toFixed(2)+' &lt; '+th.toFixed(2)+' (связность '+m.coh.toFixed(2)+') · <b style="color:#D85A30">распалось</b>');FX.blip(160,0.05,'sawtooth');}
+ dropMol();}
+function tick(){if(!mol){startMol();return;}
+ mol.age++;
+ // проверка: все на местах?
+ var cxх=mol.seed.x, done=true;
+ for(var i=0;i<mol.slots.length;i++){var a=mol.slots[i];var tx=targetX(i),ty=targetY();
+  if(Math.abs(a.x-tx)>14||Math.abs(a.y-ty)>14)done=false;}
+ if(done||mol.age>8)finishMol();}
+function targetX(i){var n=mol.slots.length;var span=Math.min(Wc-80, n*98);return mol.seed.x0!=null?mol.seed.x0:( (Wc-span)/2 + span*(i+0.5)/n );}
+function targetY(){return Hc*0.5;}
+function move(dt){for(var i=0;i<AG.length;i++){var a=AG[i];
+ if(a.st==='free'){a.x+=a.vx*dt;a.y+=a.vy*dt;a.vx+=(Math.random()-0.5)*30*dt;a.vy+=(Math.random()-0.5)*30*dt;
+  a.vx*=0.995;a.vy*=0.995;if(a.x<26){a.x=26;a.vx=Math.abs(a.vx);}if(a.x>Wc-26){a.x=Wc-26;a.vx=-Math.abs(a.vx);}
+  if(a.y<44){a.y=44;a.vy=Math.abs(a.vy);}if(a.y>Hc-26){a.y=Hc-26;a.vy=-Math.abs(a.vy);}}}
+ if(mol)for(i=0;i<mol.slots.length;i++){var b=mol.slots[i];var n=mol.slots.length;var span=Math.min(Wc-100,n*98);
+  var tx=(Wc-span)/2+span*(i+0.5)/n, ty=Hc*0.5;b.x+=(tx-b.x)*dt*3;b.y+=(ty-b.y)*dt*3;}}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||380;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);Wc=W;Hc=H;
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ // линия сборки
+ if(mol&&mol.slots.length>1){ctx.strokeStyle='#1D9E75';ctx.globalAlpha=0.5;ctx.lineWidth=2;ctx.beginPath();
+  for(var i=0;i<mol.slots.length;i++){var a=mol.slots[i];if(i===0)ctx.moveTo(a.x,a.y);else ctx.lineTo(a.x,a.y);}ctx.stroke();ctx.globalAlpha=1;}
+ for(i=0;i<AG.length;i++){var a=AG[i];var mainT=a.tg[0];var col=THC[mainT]||'#888780';
+  var inMol=a.st==='mol';var rad=inMol?13:9;
+  ctx.beginPath();ctx.arc(a.x,a.y,rad,0,6.283);ctx.fillStyle=col;ctx.globalAlpha=inMol?1:0.75;ctx.fill();ctx.globalAlpha=1;
+  if(inMol){ctx.strokeStyle='#1D9E75';ctx.lineWidth=2;ctx.stroke();}
+  ctx.fillStyle=uic;ctx.font=(inMol?'600 12px':'10px')+' system-ui';ctx.textAlign='center';
+  ctx.fillText(a.cat==='ADJ'?adjF(a,'m'):a.w,a.x,a.y-rad-3);
+  ctx.fillStyle=d?'#888780':'#9A9A93';ctx.font='8px system-ui';ctx.fillText(a.cat,a.x,a.y+rad+9);}
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';
+ ctx.fillText(mol?'сборка: '+mol.tm.join('+'):'рой блуждает — ждём инициатора',10,18);
+ ctx.textAlign='right';ctx.fillText('агентов: '+AG.length,W-10,18);ctx.textAlign='start';}
+function render(){draw();
+ var e=document.getElementById('mrd-found');if(e){var h='';for(var i=0;i<found.length;i++)h+='<div>🧩 <b>'+found[i].ph+'</b> <span style="color:var(--text-muted)">(Score '+found[i].sc.toFixed(2)+', λ '+found[i].lam.toFixed(2)+')</span></div>';e.innerHTML=h||'<span style="color:var(--text-muted)">рой ещё ничего не выяснил…</span>';}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.015);
+ if(run){acc+=dt;var iv=1.4-spd*0.17;if(acc>=iv){acc=0;tick();}}
+ move(dt);render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ рой работает':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-th').oninput=function(){th=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

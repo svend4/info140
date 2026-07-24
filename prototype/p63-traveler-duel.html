@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Дуэт странников (характеры на феромонном поле)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:400px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);touch-action:none}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.tg{cursor:pointer;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:8px;padding:6px 11px;font-size:12.5px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Дуэт странников</div>
+<div class="sub">p63: на одном феромонном поле соревнуются характеры. 🟠 Консерватор идёт по натоптанному (усиливает магистрали = обобщение), 🔵 Исследователь — в нехоженое (novelty search = дробление), 🟣 Скиталец — наугад. Их баланс решает: колея, живая карта или распылённость</div>
+<canvas id="mrd-c"></canvas>
+<div class="row" id="mrd-tgs"></div>
+<div class="hud"><span>покрытие троп <b id="mrd-cov">—</b></span><span>магистраль <b id="mrd-hw">—</b></span><span>вердикт: <b id="mrd-verd">—</b></span></div>
+<div class="panel"><h3>🐜 Протоптанная мысль</h3><div style="font-size:15px;font-weight:600" id="mrd-trail">—</div></div>
+<div class="panel"><h3>Журнал странников</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>испарение <input id="mrd-ev" type="range" min="0.01" max="0.2" step="0.01" value="0.06"></label></div>
+<div class="note">Один Консерватор → одна жирная колея, покрытие мало (застой-обобщение). Один Исследователь → всё покрыто ровно и тонко, магистралей нет (шум-дробление). Вместе — живая карта: магистрали + свежие тропы. Тот же рычаг, но через характеры населения. Физика и ACO — из p62/in4n. Файл: prototype/p63-traveler-duel.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var WORDS=[['город','г'],['улица','г'],['мост','гд'],['путь','дм'],['поток','д'],['поезд','гд'],['свет','с'],['заря','сп'],['луч','с'],['слово','м'],['мысль','мв'],['идея','м'],['время','в'],['тишина','в'],['река','пд'],['сад','п'],['смысл','м'],['вечность','в']];
+var TRV=[
+ {nm:'Консерватор',col:'#EF9F27',on:true,mode:'follow',cur:0,tgt:0,prev:-1,tw:1,accH:0},
+ {nm:'Исследователь',col:'#378ADD',on:true,mode:'novel',cur:5,tgt:5,prev:-1,tw:1,accH:0.4},
+ {nm:'Скиталец',col:'#7F77DD',on:false,mode:'random',cur:10,tgt:10,prev:-1,tw:1,accH:0.8}];
+var N=[],E=[],run=true,evap=0.06,last=0,Wc=640,Hc=400,logL=[];
+function shares(a,b){for(var i=0;i<a.tg.length;i++)if(b.tg.indexOf(a.tg[i])>=0)return true;return false;}
+function reset(){N=[];E=[];logL=[];
+ for(var i=0;i<WORDS.length;i++)N.push({w:WORDS[i][0],tg:WORDS[i][1].split(''),x:60+Math.random()*(Wc-120),y:60+Math.random()*(Hc-120),vx:0,vy:0,deg:0,drag:false});
+ for(i=0;i<N.length;i++)for(var j=i+1;j<N.length;j++)if(shares(N[i],N[j])&&Math.random()<0.8)E.push({a:i,b:j,ph:0,L:90+Math.random()*40});
+ for(i=0;i<N.length;i++){var has=false;for(j=0;j<E.length;j++)if(E[j].a===i||E[j].b===i)has=true;
+  if(!has)E.push({a:i,b:(i+1)%N.length,ph:0,L:110});}
+ for(j=0;j<E.length;j++){N[E[j].a].deg++;N[E[j].b].deg++;}
+ for(i=0;i<TRV.length;i++){TRV[i].cur=TRV[i].tgt=(i*6)%N.length;TRV[i].prev=-1;TRV[i].tw=1;}}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function edgesOf(i){var o=[];for(var j=0;j<E.length;j++)if(E[j].a===i||E[j].b===i)o.push(E[j]);return o;}
+function hop(tr){var cur=tr.tgt;tr.prev=tr.cur;tr.cur=cur;
+ var es=edgesOf(cur);if(!es.length)return;
+ var best=null,bw=-1;
+ for(var k=0;k<es.length;k++){var e=es[k];var o=(e.a===cur)?e.b:e.a;if(o===tr.prev&&es.length>1)continue;
+  var st=shares(N[cur],N[o])?0.35:0;var w;
+  if(tr.mode==='follow')w=1+2.2*e.ph+st+Math.random()*0.4;
+  else if(tr.mode==='novel')w=1.8/(1+e.ph)+st+Math.random()*0.4;
+  else w=1+Math.random()*2;
+  if(w>bw){bw=w;best={e:e,o:o};}}
+ if(!best)return;
+ best.e.ph+=1;tr.tgt=best.o;tr.tw=0;
+ var why=tr.mode==='follow'?'феромон '+best.e.ph.toFixed(1):tr.mode==='novel'?'нехоженое (было '+(best.e.ph-1).toFixed(1)+')':'наугад';
+ addLog('<b style="color:'+tr.col+'">'+tr.nm+'</b>: '+N[cur].w+' → '+N[best.o].w+' ('+why+')');
+ FX.blip(tr.mode==='follow'?420:tr.mode==='novel'?540:480,0.025);}
+function physics(dt){var i,j;
+ for(i=0;i<N.length;i++)for(j=i+1;j<N.length;j++){var a=N[i],b=N[j];
+  var dx=b.x-a.x,dy=b.y-a.y;var d2=dx*dx+dy*dy+40;var d=Math.sqrt(d2);
+  var F=5200/d2;var fx=dx/d*F,fy=dy/d*F;
+  if(!a.drag){a.vx-=fx;a.vy-=fy;}if(!b.drag){b.vx+=fx;b.vy+=fy;}}
+ for(j=0;j<E.length;j++){var e=E[j];var a2=N[e.a],b2=N[e.b];
+  var dx2=b2.x-a2.x,dy2=b2.y-a2.y;var d3=Math.sqrt(dx2*dx2+dy2*dy2)+0.01;
+  var F2=(d3-e.L)*0.02;var fx2=dx2/d3*F2,fy2=dy2/d3*F2;
+  if(!a2.drag){a2.vx+=fx2;a2.vy+=fy2;}if(!b2.drag){b2.vx-=fx2;b2.vy-=fy2;}}
+ for(i=0;i<N.length;i++){var n=N[i];if(n.drag)continue;
+  n.vx*=0.9;n.vy*=0.9;n.x+=n.vx;n.y+=n.vy;
+  if(n.x<36){n.x=36;n.vx=Math.abs(n.vx);}if(n.x>Wc-36){n.x=Wc-36;n.vx=-Math.abs(n.vx);}
+  if(n.y<36){n.y=36;n.vy=Math.abs(n.vy);}if(n.y>Hc-30){n.y=Hc-30;n.vy=-Math.abs(n.vy);}}
+ for(j=0;j<E.length;j++)E[j].ph*=Math.max(0,1-evap*dt*2);}
+function stats(){var cov=0,mx=0;for(var j=0;j<E.length;j++){if(E[j].ph>0.15)cov++;if(E[j].ph>mx)mx=E[j].ph;}
+ return {cov:cov/E.length,mx:mx};}
+function topTrail(){var es=E.slice().sort(function(a,b){return b.ph-a.ph;}).slice(0,3).filter(function(e){return e.ph>0.5;});
+ if(!es.length)return null;var chain=[N[es[0].a].w,N[es[0].b].w];
+ for(var k=1;k<es.length;k++){var e=es[k];
+  if(N[e.a].w===chain[chain.length-1])chain.push(N[e.b].w);
+  else if(N[e.b].w===chain[chain.length-1])chain.push(N[e.a].w);
+  else if(N[e.a].w===chain[0])chain.unshift(N[e.b].w);
+  else if(N[e.b].w===chain[0])chain.unshift(N[e.a].w);}
+ return chain;}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||400;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);Wc=W;Hc=H;
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ for(var j=0;j<E.length;j++){var e=E[j];var a=N[e.a],b=N[e.b];
+  ctx.strokeStyle=d?'#3a3a3f':'#dad8ce';ctx.lineWidth=1;ctx.globalAlpha=0.6;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  if(e.ph>0.15){ctx.strokeStyle='#EF9F27';ctx.globalAlpha=Math.min(0.85,e.ph*0.2);ctx.lineWidth=Math.min(6,0.5+e.ph*0.8);
+   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
+ ctx.globalAlpha=1;
+ for(var i=0;i<N.length;i++){var n=N[i];var rad=6+n.deg*1.6;
+  ctx.beginPath();ctx.arc(n.x,n.y,rad,0,6.283);ctx.fillStyle=THC[n.tg[0]]||'#888780';ctx.fill();
+  ctx.fillStyle=uic;ctx.font='10.5px system-ui';ctx.textAlign='center';ctx.fillText(n.w,n.x,n.y-rad-4);}
+ for(i=0;i<TRV.length;i++){var tr=TRV[i];if(!tr.on)continue;
+  var A2=N[tr.cur],B2=N[tr.tgt];var t=tr.tw;t=t*t*(3-2*t);
+  var tx=A2.x+(B2.x-A2.x)*t,ty=A2.y+(B2.y-A2.y)*t;
+  ctx.beginPath();ctx.arc(tx,ty,10,0,6.283);ctx.fillStyle=tr.col;ctx.globalAlpha=0.22;ctx.fill();ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(tx,ty,5,0,6.283);ctx.fillStyle=tr.col;ctx.fill();}
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText('тропы общие — характеры разные',10,16);ctx.textAlign='start';}
+function render(){draw();var s=stats();
+ document.getElementById('mrd-cov').textContent=Math.round(s.cov*100)+'%';
+ document.getElementById('mrd-hw').textContent=s.mx.toFixed(1);
+ var v,vc;
+ if(s.mx>6&&s.cov<0.4){v='колея — застой (обобщение)';vc='#7F77DD';}
+ else if(s.cov>0.75&&s.mx<2.2){v='распылено — шум (дробление)';vc='#D85A30';}
+ else if(s.mx>=1.5&&s.cov>=0.25){v='живая карта: магистрали + свежие тропы';vc='#1D9E75';}
+ else {v='карта нарождается…';vc='#888780';}
+ var e=document.getElementById('mrd-verd');if(e)e.innerHTML='<span style="color:'+vc+'">'+v+'</span>';
+ var ch=topTrail();e=document.getElementById('mrd-trail');
+ if(e)e.innerHTML=ch?ch.join(' → '):'<span style="color:var(--text-muted);font-weight:400">…</span>';
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.013);
+ if(run){physics(dt);
+  for(var i=0;i<TRV.length;i++){var tr=TRV[i];if(!tr.on)continue;
+   tr.tw=Math.min(1,tr.tw+dt*1.4);tr.accH+=dt;
+   if(tr.tw>=1&&tr.accH>=1.15){tr.accH=0;hop(tr);}}}
+ render();requestAnimationFrame(loop);}
+var cv=document.getElementById('mrd-c'),dragN=null;
+function hitNode(mx,my){for(var i=N.length-1;i>=0;i--){var n=N[i];var r=8+n.deg*1.6;if((mx-n.x)*(mx-n.x)+(my-n.y)*(my-n.y)<r*r*1.6)return n;}return null;}
+cv.addEventListener('pointerdown',function(e){var rc=cv.getBoundingClientRect();var n=hitNode(e.clientX-rc.left,e.clientY-rc.top);if(n){dragN=n;n.drag=true;}});
+window.addEventListener('pointermove',function(e){if(!dragN)return;var rc=cv.getBoundingClientRect();dragN.x=e.clientX-rc.left;dragN.y=e.clientY-rc.top;dragN.vx=0;dragN.vy=0;});
+window.addEventListener('pointerup',function(){if(dragN){dragN.drag=false;dragN=null;}});
+function $(id){return document.getElementById(id);}
+var tgs=$('mrd-tgs');for(var i=0;i<TRV.length;i++){(function(k){var tr=TRV[k];var b=document.createElement('button');b.className='tg';
+ function up(){b.style.borderColor=tr.on?tr.col:'';b.style.color=tr.on?tr.col:'';b.textContent=(tr.on?'● ':'○ ')+tr.nm+' ('+(tr.mode==='follow'?'по феромону':tr.mode==='novel'?'в нехоженое':'наугад')+')';}
+ b.onclick=function(){tr.on=!tr.on;up();addLog('<b style="color:'+tr.col+'">'+tr.nm+'</b> '+(tr.on?'вышел на тропы':'ушёл отдыхать'));};up();tgs.appendChild(b);})(i);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-ev').oninput=function(){evap=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п75 · Дождь-шифр</title>
+<style>
+:root{--bg:#0e1016;--pnl:#161a24;--ink:#e8ecf5;--dim:#93a0b4;--acc:#378ADD;--line:#232a38;--well:#06090f;}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6fb;--pnl:#fff;--ink:#1b2230;--dim:#54607a;--line:#dce3ee;--well:#070b12;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:14px}
+h1{font-size:18px;margin:0 0 3px}h1 small{color:var(--dim);font-weight:400;font-size:12px}
+.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px}
+.grid{display:flex;gap:14px;flex-wrap:wrap}
+.col{flex:1 1 430px;min-width:300px}
+canvas{background:var(--well);border-radius:12px;display:block;touch-action:none}
+#c{width:100%;height:auto;aspect-ratio:1/1}
+.card{background:var(--pnl);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px}
+.ctl label{font-size:12px;color:var(--dim);display:flex;gap:6px;align-items:center}
+input[type=range]{width:120px;accent-color:var(--acc)}
+button{background:#212a3b;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+@media (prefers-color-scheme:light){button{background:#eef2f9}}
+button:hover{border-color:var(--acc)}button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.meter{font-size:12px;color:var(--dim)}.meter b{color:var(--ink)}
+.bar{height:9px;border-radius:5px;background:#212a3b;overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#26445e,#2f7fbf,#7fd4ff);transition:width .1s}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>п75 · Дождь-шифр <small>— интерференция + автоколебания + криптография (наглядно)</small></h1>
+  <p class="sub">Лужа под дождём: каждая капля — источник-осциллятор, по воде расходятся круги, волны <b>накладываются одна на другую</b> (интерференция). Капли сидят на фигуре, поэтому она <b>всегда чуть видна</b> — но пока осцилляторы <b>вразнобой</b>, встречные волны рвут её в дрожащую рябь (нестабильно, сюрреально). Когда они <b>синхронизируются</b> (связь Курамото) — рябь становится когерентной и фигура <b>устаканивается в чёткую стоячую картину</b>. Честная физика: суперпозиция волн с затуханием + синхронизация Курамото. Это про <b>когерентность/порядок</b>, а не про тайну: фигуру не прячут — её успокаивают. «Шифр» здесь — метафора; настоящий крипто-родственник (где синхронизация ДЕЙСТВИТЕЛЬНО расшифровывает) — это хаос-синхронизация Пекоры–Кэрролла, см. пояснение справа.</p>
+  <div class="grid">
+    <div class="col">
+      <canvas id="c" width="460" height="460"></canvas>
+      <div class="ctl">
+        <span class="meter">фигура из капель:</span>
+        <div class="row">
+          <button class="pic on" data-p="heart">♥</button>
+          <button class="pic" data-p="lambda">λ</button>
+          <button class="pic" data-p="disc">●</button>
+          <button class="pic" data-p="key">🔑</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <label>связь K (синхрон) <input id="coupling" type="range" min="0" max="40" value="4"></label>
+        <label>расстройка <input id="detune" type="range" min="0" max="60" value="26"></label>
+        <button id="sync">⚡ синхронизировать</button>
+        <button id="scramble">🎲 расстроить</button>
+        <button id="pause">пауза</button>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="meter">синхронизация r <span style="font-size:10.5px">(порядок Курамото)</span> <b id="rval">0.00</b></div>
+        <div class="bar"><i id="rbar" style="width:0%"></i></div>
+        <div class="meter" style="margin-top:8px">состояние: <b id="verdict" style="color:#D85A30">рябь-шум (ключ не сведён)</b></div>
+      </div>
+      <div class="card">
+        <div class="meter">Что здесь честно</div>
+        <p style="font-size:12.5px;margin:6px 0 0">• <b>Волны и интерференция</b> — реально: поле = суперпозиция круговых волн с затуханием, яркость |S| = как складки воды накладываются.<br>• <b>Автоколебания</b> — источники сами держат ритм; их сцепка = модель <b>Курамото</b> (dθ<sub>i</sub>=ω<sub>i</sub>+K·r·sin(ψ−θ<sub>i</sub>)); порядок r∈[0,1] честно считается. <i>Оговорки: настоящий дождь каплями НЕ связан фазово — это игровая модель связанных источников; и r→1 — не «лучше» по рычагу (это жёсткий полюс), живое — устойчивый узор при частичной когерентности.</i><br>• <b>Крипто</b> — честно НЕ здесь: фигура не спрятана (капли на ней), синхронизация лишь делает рябь когерентной. Настоящее «синхронизация=расшифровка» — это <b>хаос-синхронизация Пекоры–Кэрролла</b>: два хаотич. осциллятора синхронизируются, сообщение маскируется хаотич. несущей, приёмник вычитает синхронную копию. Это следующий шаг, если нужен реальный шифр.</p>
+      </div>
+      <div class="card">
+        <div class="meter">связь с рычагом MERIDIAN</div>
+        <p style="font-size:12.5px;margin:6px 0 0">r→0 — хаотичная рябь (дробление, шум); r→1 — жёсткий синхрон (порядок проявляет смысл). Смысл читается, когда порядок <b>достаточен</b>, но не абсолютен — та же живая середина между шумом и застыванием.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+var TAU=Math.PI*2;
+var c=document.getElementById('c'), g=c.getContext('2d');
+var coupling=document.getElementById('coupling'), detune=document.getElementById('detune');
+var syncBtn=document.getElementById('sync'), scrBtn=document.getElementById('scramble'), pauseBtn=document.getElementById('pause');
+var rval=document.getElementById('rval'), rbar=document.getElementById('rbar'), verdict=document.getElementById('verdict');
+
+var GS=6, CW=Math.ceil(460/GS), CH=Math.ceil(460/GS), K_WAVE=0.11;
+var pic='heart', running=true;
+var sources=[], NS=0, KD=null, AMP=null, theta=null, omega=null, ripples=[];
+
+/* --- источники из формы (сэмплим заполненные пиксели) --- */
+function makeSources(kind){
+  var oc=document.createElement('canvas'); oc.width=460; oc.height=460; var o=oc.getContext('2d');
+  o.fillStyle='#fff'; o.strokeStyle='#fff'; o.save(); o.translate(230,230);
+  if(kind==='heart'){
+    var s=8.2; o.beginPath();
+    for(var a=0;a<TAU;a+=0.02){ var x=16*Math.pow(Math.sin(a),3)*s, y=-(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a))*s; a?o.lineTo(x,y):o.moveTo(x,y); }
+    o.closePath(); o.fill();
+  } else if(kind==='lambda'){
+    o.font='bold 350px Georgia,serif'; o.textAlign='center'; o.textBaseline='middle'; o.fillText('λ',0,12);
+  } else if(kind==='disc'){
+    o.beginPath(); o.arc(0,0,150,0,TAU); o.fill();
+  } else {
+    o.lineWidth=32; o.beginPath(); o.arc(-72,0,54,0,TAU); o.stroke();
+    o.fillRect(-30,-16,175,32); o.fillRect(118,-16,18,52); o.fillRect(88,-16,18,42);
+  }
+  o.restore();
+  var d=o.getImageData(0,0,460,460).data, pts=[];
+  for(var yy=6;yy<454;yy+=3) for(var xx=6;xx<454;xx+=3){ if(d[(yy*460+xx)*4+3]>128) pts.push([xx,yy]); }
+  var N=Math.min(66, pts.length), out=[];
+  for(var i=0;i<N;i++){ var p=pts[(i*pts.length/N)|0]; if(p) out.push({x:p[0],y:p[1]}); }
+  return out;
+}
+function buildKD(){
+  NS=sources.length; KD=new Float32Array(CW*CH*NS); AMP=new Float32Array(CW*CH*NS);
+  for(var cy=0;cy<CH;cy++) for(var cx=0;cx<CW;cx++){
+    var px=cx*GS+GS/2, py=cy*GS+GS/2, base=(cy*CW+cx)*NS;
+    for(var s=0;s<NS;s++){
+      var dx=px-sources[s].x, dy=py-sources[s].y, dist=Math.sqrt(dx*dx+dy*dy);
+      KD[base+s]=K_WAVE*dist; AMP[base+s]=Math.exp(-dist/110);   // затухание: близкие капли доминируют
+    }
+  }
+}
+function initOsc(){
+  theta=new Float32Array(NS); omega=new Float32Array(NS);
+  for(var i=0;i<NS;i++){ theta[i]=Math.random()*TAU; omega[i]=(Math.random()-0.5); }
+}
+function setPic(kind){ pic=kind; sources=makeSources(kind); buildKD(); initOsc(); ripples=[]; }
+setPic('heart');
+
+/* --- шаг Курамото (среднее поле, O(N)) --- */
+function kuramoto(){
+  var sc=0, ss=0, i;
+  for(i=0;i<NS;i++){ sc+=Math.cos(theta[i]); ss+=Math.sin(theta[i]); }
+  var r=Math.hypot(sc,ss)/NS, psi=Math.atan2(ss,sc);
+  var K=+coupling.value/10, dw=+detune.value/1000, dt=0.16;
+  for(i=0;i<NS;i++){ theta[i]+= (omega[i]*dw + K*r*Math.sin(psi-theta[i]))*dt; }
+  return r;
+}
+
+/* --- поле интерференции: яркость = |Σ a·e^{i(k·d+θ)}|, a=затухание --- */
+var SCALE=0.085;
+function renderField(){
+  for(var cy=0;cy<CH;cy++){
+    for(var cx=0;cx<CW;cx++){
+      var base=(cy*CW+cx)*NS, sre=0, sim=0;
+      for(var s=0;s<NS;s++){ var A=AMP[base+s], ph=KD[base+s]+theta[s]; sre+=A*Math.cos(ph); sim+=A*Math.sin(ph); }
+      var b=Math.sqrt(sre*sre+sim*sim)*SCALE; b=b<0?0:b>1?1:b;
+      g.fillStyle='rgb('+((16+b*100)|0)+','+((50+b*168)|0)+','+((86+b*165)|0)+')';
+      g.fillRect(cx*GS,cy*GS,GS,GS);
+    }
+  }
+}
+
+/* --- капли-круги (дождь) --- */
+function drawRipples(){
+  if(Math.random()<0.05 && sources.length){ var s=sources[(Math.random()*sources.length)|0]; ripples.push({x:s.x,y:s.y,age:0}); }
+  for(var i=ripples.length-1;i>=0;i--){
+    var R=ripples[i]; R.age++;
+    var rad=R.age*3.2, al=1-R.age/26;
+    if(al<=0){ ripples.splice(i,1); continue; }
+    g.strokeStyle='rgba(160,220,255,'+(al*0.4).toFixed(3)+')'; g.lineWidth=1.3;
+    g.beginPath(); g.arc(R.x,R.y,rad,0,TAU); g.stroke();
+  }
+}
+
+function meters(r){
+  rval.textContent=r.toFixed(2); rbar.style.width=(r*100).toFixed(0)+'%';
+  if(r<0.30){ verdict.textContent='дрожит-рвётся (вразнобой)'; verdict.style.color='#D85A30'; }
+  else if(r<0.68){ verdict.textContent='успокаивается…'; verdict.style.color='#EF9F27'; }
+  else { verdict.textContent='✓ устаканилась — чёткая (синхрон)'; verdict.style.color='#1D9E75'; }
+}
+
+function loop(){
+  var r=0;
+  if(running) r=kuramoto(); else { var sc=0,ss=0; for(var i=0;i<NS;i++){sc+=Math.cos(theta[i]);ss+=Math.sin(theta[i]);} r=Math.hypot(sc,ss)/NS; }
+  renderField(); drawRipples(); meters(r);
+  requestAnimationFrame(loop);
+}
+
+/* --- управление --- */
+document.querySelectorAll('.pic').forEach(function(btn){
+  btn.onclick=function(){ document.querySelectorAll('.pic').forEach(function(x){x.classList.remove('on');}); btn.classList.add('on'); setPic(btn.dataset.p); };
+});
+syncBtn.onclick=function(){ for(var i=0;i<NS;i++) theta[i]=0; };             // свести ключ
+scrBtn.onclick=function(){ for(var i=0;i<NS;i++) theta[i]=Math.random()*TAU; }; // сбить
+pauseBtn.onclick=function(){ running=!running; pauseBtn.textContent=running?'пауза':'пуск'; pauseBtn.classList.toggle('on',!running); };
+
+loop();
+})();
+</script>
+</body>
+</html>

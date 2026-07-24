@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Оконная студия (барабан · мантра · стих)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{cursor:pointer;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:8px;padding:7px 13px;font-size:13px}.tab.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1)}
+#mrd-c{display:block;width:100%;height:150px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.out{font-size:15px;line-height:1.8;min-height:60px}.out .fresh{color:#1D9E75;font-weight:600}.out.mono{font-family:var(--mono);font-size:14px}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Оконная студия</div>
+<div class="sub">одна формула — три искусства: петля × K повторов (окна закрыты) → окно (впуск/замена одного элемента). Барабан живёт у полюса порядка, стих — в середине, сюр-стих — у края шума: у каждого жанра своя живая зона на рычаге</div>
+<div class="tabs" id="mrd-tabs"></div>
+<canvas id="mrd-c"></canvas>
+<div class="panel"><h3 id="mrd-oh">Произведение (растёт окнами)</h3><div class="out" id="mrd-out">—</div></div>
+<div class="panel"><h3>Журнал окон</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ студия работает</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="8" step="1" value="5"></label></div>
+<div class="row"><span style="color:var(--text-secondary)">K — повторов до окна:</span>
+<input id="mrd-k" type="range" min="0" max="6" step="1" value="3" style="flex:1"><b id="mrd-kv">3</b>
+<button class="btn" id="mrd-sur" style="display:none">🌀 сюр-режим</button></div>
+<div class="note">Стрелка новизны показывает долю обновлённых элементов; зелёная полоса — живая зона ЖАНРА (барабан 6–25%, мантра 2–15%, стих 35–80%, сюр 55–95%). K=0 — шум для барабана, но норма для сюр-стиха: жанры — точки на рычаге. Звук: барабан честно озвучен (бочка/малый/хэт/том через WebAudio, нужен XAMPP). Файл: prototype/p65-window-studio.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var POOL=[['свет','с'],['заря','сп'],['река','пд'],['город','г'],['путь','дм'],['слово','м'],['время','в'],['тишина','вм'],['мысль','мв'],['сад','пг'],['мост','гд'],['вечность','в']].map(function(a){return {w:a[0],tg:a[1].split('')};});
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+var ANA=[['тихо','в'],['светло','с'],['снова','в'],['дальше','д'],['глубже','м'],['утром','св']].map(function(a){return {w:a[0],tg:a[1].split('')};});
+var PHR=[['дышит город под мостами','гп'],['держит время переулки','вг'],['несёт река последний свет','пс'],['заводит речь заря над садом','сп'],['уходит поезд в тишину','дв'],['растёт из слова целый мир','м'],['кружит путь вокруг огня','дс'],['листает ветер вечность','вп'],['стучит в окно рассветный луч','с'],['плывёт мысль через реку','мп']].map(function(a){return {t:a[0],tg:a[1].split('')};});
+var MODES=[{id:'drum',nm:'🥁 барабан',band:[0.06,0.25]},{id:'mantra',nm:'📿 мантра',band:[0.02,0.15]},{id:'verse',nm:'✍ стих',band:[0.35,0.8]}];
+var mode='drum',K=3,rep=0,pos=0,run=true,spd=5,acc=0,last=0,sur=false,flash=0;
+var out=[],logL=[],totU=0,newU=0;
+var drumP=['Б','х','С','х'],mpair=[0,1],mloop=[],ana=0,lastPh=null;
+function mkMloop(){var a=POOL[mpair[0]].w,b=POOL[mpair[1]].w;mloop=[a,b,a,b,b,b,a,a];}
+function reset(){rep=0;pos=0;out=[];logL=[];totU=0;newU=0;flash=0;drumP=['Б','х','С','х'];mpair=[0,1];mkMloop();ana=0;lastPh=null;}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function push(line,fresh){out.push({t:line,f:!!fresh});if(out.length>8)out.shift();}
+function drumSound(ch){if(ch==='Б')FX.blip(90,0.06,'sine');else if(ch==='С')FX.blip(240,0.05,'sawtooth');else if(ch==='Т')FX.blip(150,0.06,'sine');else FX.blip(900,0.02,'square');}
+function loopArr(){return mode==='drum'?drumP:mode==='mantra'?mloop:[ANA[ana].w,'+ фраза'];}
+function tick(){var L=loopArr();
+ if(mode!=='verse'){var ch=L[pos];if(mode==='drum')drumSound(ch);else FX.blip(380+pos*30,0.03);
+  pos++;if(pos<L.length)return;pos=0;}
+ // конец оборота
+ totU+=(mode==='drum'?drumP.length:mode==='mantra'?8:2);
+ if(mode==='drum'){
+  rep++;var kk=sur?0:K;
+  if(rep>K&&K>=0&&rep>=K+1||K===0){ // окно
+   var line=drumP.slice();line[line.length-1]='Т·Т';newU+=2;flash=1;
+   push(line.join(' '),true);
+   if(Math.random()<0.5){var bi=Math.floor(Math.random()*drumP.length);var alts=['Б','С','х','Т'].filter(function(x){return x!==drumP[bi];});
+    var nv=alts[Math.floor(Math.random()*alts.length)];addLog('🪟 окно: сбивка Т·Т + мутация доли '+(bi+1)+': '+drumP[bi]+'→'+nv);drumP[bi]=nv;newU++;}
+   else addLog('🪟 окно: сбивка Т·Т в конце такта');
+   FX.blip(150,0.08,'sine');rep=0;}
+  else {push(drumP.join(' '));addLog('повтор '+rep+'/'+K+' — рисунок крепнет');}}
+ else if(mode==='mantra'){
+  rep++;
+  if(rep>=K+1||K===0){ // окно: замена слова пары
+   var keep=mpair[0],old=POOL[mpair[1]].w;var best=null,bs=-1;
+   for(var j=0;j<POOL.length;j++){if(j===mpair[0]||j===mpair[1])continue;var c=cos(POOL[j].tg,POOL[keep].tg)+Math.random()*0.1;if(c>bs){bs=c;best=j;}}
+   if(best!=null&&bs>=0.2){mpair=[mpair[1],best];mkMloop();newU++;flash=1;
+    push(mloop.join(' · '),true);addLog('🪟 окно-замена: «'+old+'» остаётся, входит «<b>'+POOL[best].w+'</b>» (связь '+bs.toFixed(2)+')');FX.chord([523,659],0.06);}
+   else {push(mloop.join(' · '));addLog('🛡 блок: достойной замены нет — мантра цела');}
+   rep=0;}
+  else {push(mloop.join(' · '));addLog('повтор '+rep+'/'+K+' — мантра крутится');}}
+ else { // verse: каждый оборот = строка
+  var th=sur?0.02:0.2;var cands=PHR.filter(function(p){return p!==lastPh&&cos(p.tg,ANA[ana].tg)>=th;});
+  if(!cands.length)cands=PHR.filter(function(p){return p!==lastPh;});
+  var ph=cands[Math.floor(Math.random()*cands.length)];lastPh=ph;newU++;
+  rep++;var kw=sur?1:K;
+  if(rep>=kw+1||kw===0){ // окно: смена анафоры
+   var old2=ANA[ana].w;var ni=ana;var tries=0;
+   while(tries++<10){var cand=Math.floor(Math.random()*ANA.length);if(cand!==ana&&(sur||cos(ANA[cand].tg,ph.tg)>0)){ni=cand;break;}}
+   ana=ni;newU++;flash=1;
+   push(ANA[ana].w+' '+ph.t,true);
+   addLog('🪟 окно: анафора «'+old2+'» → «<b>'+ANA[ana].w+'</b>»'+(sur?' (сюр: дальние темы впущены)':''));
+   FX.chord([440,587],0.05);rep=0;}
+  else {push(ANA[ana].w+' '+ph.t);addLog('повтор анафоры '+rep+'/'+kw);}
+  FX.blip(400+ana*40,0.03);}}
+function novelty(){return totU?newU/totU:0;}
+function band(){if(mode==='verse'&&sur)return [0.55,0.95];for(var i=0;i<MODES.length;i++)if(MODES[i].id===mode)return MODES[i].band;return [0.1,0.5];}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||150;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ // петля-полоса
+ var L=loopArr();var n=L.length;var bw=Math.min(70,(W-40)/n);var x0=(W-bw*n)/2,y=40;
+ for(var i=0;i<n;i++){var on=(mode!=='verse'&&i===pos);
+  ctx.fillStyle=on?'#1D9E75':(d?'#26262B':'#fff');ctx.strokeStyle=on?'#1D9E75':(d?'#444441':'#D3D1C7');ctx.lineWidth=1.5;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x0+i*bw+3,y-18,bw-6,36,8);else ctx.rect(x0+i*bw+3,y-18,bw-6,36);ctx.fill();ctx.stroke();
+  ctx.fillStyle=on?'#fff':uic;ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(L[i],x0+i*bw+bw/2,y+5);}
+ // окно-вспышка
+ if(flash>0){ctx.strokeStyle='#1D9E75';ctx.globalAlpha=flash;ctx.setLineDash([6,5]);ctx.lineWidth=2.5;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x0-8,y-26,bw*n+16,52,12);else ctx.rect(x0-8,y-26,bw*n+16,52);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.fillStyle='#1D9E75';ctx.font='600 11px system-ui';ctx.textAlign='center';ctx.fillText('🪟 ОКНО ОТКРЫТО',W/2,y-32);}
+ ctx.fillStyle=uic;ctx.font='12px system-ui';ctx.textAlign='left';ctx.fillText('повтор '+rep+'/'+(mode==='verse'&&sur?1:K),10,16);
+ // шкала новизны с жанровой зоной
+ var gx0=30,gx1=W-30,gy=H-28;var b=band();var nv=novelty();
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.18;ctx.fillRect(gx0+(gx1-gx0)*b[0],gy-7,(gx1-gx0)*(b[1]-b[0]),14);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(gx0,gy);ctx.lineTo(gx1,gy);ctx.stroke();
+ var mx=gx0+(gx1-gx0)*Math.min(1,nv);var inb=nv>=b[0]&&nv<=b[1];
+ ctx.fillStyle=inb?'#1D9E75':'#D85A30';ctx.beginPath();ctx.arc(mx,gy,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('колея',gx0,gy-12);ctx.textAlign='right';ctx.fillText('шум',gx1,gy-12);
+ ctx.textAlign='center';ctx.fillStyle=inb?'#1D9E75':'#D85A30';
+ ctx.fillText('новизна '+Math.round(nv*100)+'% · '+(inb?'живая зона жанра ✓':(nv<b[0]?'колея — застой':'шум — распад')),W/2,gy+22);ctx.textAlign='start';}
+function render(){draw();
+ var e=document.getElementById('mrd-out');if(e){e.className='out'+(mode==='drum'?' mono':'');
+  var h='';for(var i=0;i<out.length;i++)h+='<div'+(out[i].f?' class="fresh"':'')+'>'+out[i].t+'</div>';
+  e.innerHTML=h||'<span style="color:var(--text-muted)">студия набирает ритм…</span>';}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop2(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.012);
+ if(flash>0)flash-=dt*0.9;
+ if(run){acc+=dt;var iv=(mode==='drum'?0.5:0.9)-spd*0.055;if(acc>=Math.max(0.08,iv)){acc=0;tick();}}
+ render();requestAnimationFrame(loop2);}
+function $(id){return document.getElementById(id);}
+var tabs=$('mrd-tabs');for(var i=0;i<MODES.length;i++){(function(k){var m=MODES[k];var b=document.createElement('div');b.className='tab'+(k===0?' on':'');b.textContent=m.nm;
+ b.onclick=function(){mode=m.id;var ch=tabs.children;for(var j=0;j<ch.length;j++)ch[j].className='tab'+(j===k?' on':'');
+  $('mrd-sur').style.display=(mode==='verse')?'':'none';
+  $('mrd-oh').textContent=mode==='drum'?'Ритм (такты растут окнами)':mode==='mantra'?'Мантра (эволюционирует окнами-заменами)':'Стих (анафора держит, окна меняют)';
+  reset();};tabs.appendChild(b);})(i);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ студия работает':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-k').oninput=function(){K=parseInt(this.value,10);$('mrd-kv').textContent=K;};
+$('mrd-sur').onclick=function(){sur=!sur;this.className='btn'+(sur?' on':'');addLog(sur?'🌀 сюр-режим: порог связности опущен, окна каждую строку':'сюр-режим выключен');};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop2);
+})();
+</script></body></html>

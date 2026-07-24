@@ -1,0 +1,61 @@
+<svg width="100%" viewBox="0 0 680 400" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Метро-конвейер: линии, станции, расписание</title>
+<desc>Три метро-линии со станциями и пересадками, плюс расписание-конвейер из восьми фаз, где линии отправляются волнами в разные фазы, чтобы избегать пробок.</desc>
+<style>
+text{font-family:'Anthropic Sans',system-ui,'Segoe UI',Roboto,sans-serif}
+.mt{font-size:14px;fill:#2C2C2A}.mts{font-size:12px;fill:#5F5E5A}.mth{font-size:14px;font-weight:500;fill:#2C2C2A}.mttl{font-size:16px;font-weight:500;fill:#2C2C2A}
+.mbox{fill:#F1EFE8;stroke:#B4B2A9;stroke-width:1.5}.ixn{fill:#F1EFE8;stroke:#2C2C2A;stroke-width:2}
+@media (prefers-color-scheme:dark){
+.mt{fill:#E8E8EA}.mts{fill:#B4B2A9}.mth{fill:#E8E8EA}.mttl{fill:#F1EFE8}
+.mbox{fill:#2C2C2A;stroke:#888780}.ixn{fill:#2C2C2A;stroke:#E8E8EA}
+}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text class="mttl" x="40" y="30">Метро-конвейер: линии, станции, расписание</text>
+<text class="mts" x="40" y="50">движение волнами по фазам; пересадки — на пересечениях линий</text>
+<line x1="90" y1="120" x2="552" y2="120" stroke="#1D9E75" stroke-width="3" marker-end="url(#arrow)"/>
+<line x1="90" y1="200" x2="552" y2="200" stroke="#D85A30" stroke-width="3" marker-end="url(#arrow)"/>
+<line x1="180" y1="120" x2="444" y2="200" stroke="#378ADD" stroke-width="3" marker-end="url(#arrow)"/>
+<circle cx="90" cy="120" r="5" fill="#1D9E75"/>
+<circle cx="270" cy="120" r="5" fill="#1D9E75"/>
+<circle cx="360" cy="120" r="5" fill="#1D9E75"/>
+<circle cx="450" cy="120" r="5" fill="#1D9E75"/>
+<circle cx="540" cy="120" r="5" fill="#1D9E75"/>
+<circle cx="90" cy="200" r="5" fill="#D85A30"/>
+<circle cx="180" cy="200" r="5" fill="#D85A30"/>
+<circle cx="270" cy="200" r="5" fill="#D85A30"/>
+<circle cx="360" cy="200" r="5" fill="#D85A30"/>
+<circle cx="540" cy="200" r="5" fill="#D85A30"/>
+<circle cx="180" cy="120" r="7" class="ixn"/>
+<circle cx="450" cy="200" r="7" class="ixn"/>
+<text class="mth" x="66" y="124" text-anchor="end" fill="#1D9E75">A</text>
+<text class="mth" x="66" y="204" text-anchor="end" fill="#D85A30">B</text>
+<text class="mth" x="150" y="108" text-anchor="middle" fill="#378ADD">C</text>
+<text class="mts" x="180" y="146" text-anchor="middle">пересадка</text>
+<text class="mth" x="90" y="290">Расписание-конвейер (фазы такта)</text>
+<rect class="mbox" x="90" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="119" y="324" text-anchor="middle">φ0</text>
+<rect class="mbox" x="150" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="179" y="324" text-anchor="middle">φ1</text>
+<rect class="mbox" x="210" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="239" y="324" text-anchor="middle">φ2</text>
+<rect class="mbox" x="270" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="299" y="324" text-anchor="middle">φ3</text>
+<rect class="mbox" x="330" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="359" y="324" text-anchor="middle">φ4</text>
+<rect class="mbox" x="390" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="419" y="324" text-anchor="middle">φ5</text>
+<rect class="mbox" x="450" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="479" y="324" text-anchor="middle">φ6</text>
+<rect class="mbox" x="510" y="305" width="58" height="30" rx="4"/>
+<text class="mts" x="539" y="324" text-anchor="middle">φ7</text>
+<circle cx="119" cy="352" r="5" fill="#1D9E75"/>
+<circle cx="299" cy="352" r="5" fill="#1D9E75"/>
+<circle cx="479" cy="352" r="5" fill="#1D9E75"/>
+<circle cx="179" cy="352" r="5" fill="#D85A30"/>
+<circle cx="359" cy="352" r="5" fill="#D85A30"/>
+<circle cx="539" cy="352" r="5" fill="#D85A30"/>
+<circle cx="239" cy="352" r="5" fill="#378ADD"/>
+<circle cx="419" cy="352" r="5" fill="#378ADD"/>
+<text class="mts" x="90" y="380">точки — волны отправления; линии стартуют в разные фазы и не создают пробок</text>
+</svg>

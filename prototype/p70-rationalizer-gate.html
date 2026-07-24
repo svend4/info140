@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Гейт рационализации (сжатие без потери)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-tr{display:block;width:100%;height:170px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.ph{margin:3px 0;font-size:13.5px}.ph.gone{text-decoration:line-through;color:var(--text-muted);opacity:0.6}
+.ph .fc{display:inline-block;font-size:10px;padding:0 5px;border-radius:5px;background:var(--surface-2);border:1px solid var(--border);margin-left:3px;color:var(--text-secondary)}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}.btn.danger{border-color:#D85A30;color:#D85A30}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Гейт рационализации</div>
+<div class="sub">формула Rationalizer из data7 — min K(K′) при I(K′) ≥ (1−ε)·I(K) — здесь ИСПОЛНЯЕТСЯ, а не декларируется (перенос инвертирован по red-team docs/16). Сжиматель предлагает операции, гейт реально отклоняет опасные. Режим «без гейта» показывает, во что вырождается сжатие без предохранителя</div>
+<div class="hud"><span>фраз K: <b id="mrd-k">—</b></span><span>информация I: <b id="mrd-i">—</b></span><span>сжатие: <b id="mrd-cr">—</b></span><span>отклонено гейтом: <b id="mrd-rej">0</b></span><span id="mrd-st" style="font-weight:600"></span></div>
+<canvas id="mrd-tr"></canvas>
+<div class="panel"><h3>Текст (фразы · факты-чипы)</h3><div id="mrd-txt">—</div></div>
+<div class="panel"><h3>Журнал операций (✂ дубль · ⚗ слияние · ✋ гейт отклонил)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ рационализация</button><button class="btn" id="mrd-reset">↻</button>
+<button class="btn" id="mrd-ng">☠ без гейта</button><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="row"><span style="color:var(--text-secondary)">ε — допустимая потеря:</span>
+<input id="mrd-e" type="range" min="0" max="0.3" step="0.05" value="0.1" style="flex:1"><b id="mrd-ev">10%</b></div>
+<div class="note">I = число покрытых фактов (честный учёт: каждый факт-чип). Операции: удаление дубля (ΔI=0 — проходит всегда), слияние двух фраз темы в обобщение (теряет ~30% деталей — гейт решает), удаление уникальной фразы (теряет всё её — почти всегда ✋). График: траектория (K, I) — с гейтом линия идёт влево, оставаясь высоко; без гейта — обрушивается (рационализация → коллапс). Файл: prototype/p70-rationalizer-gate.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var GEN={'г':'место','с':'энергия','п':'живое','д':'процесс','в':'длительность','м':'идея'};
+function mkP(){return [
+ {t:'город дышит вечером',th:'г',f:[1,2]},
+ {t:'город дышит вечером (повтор)',th:'г',f:[1,2]},
+ {t:'улицы держат мосты',th:'г',f:[2,3]},
+ {t:'свет горит над рекой',th:'с',f:[4,5]},
+ {t:'заря льётся в сад',th:'с',f:[5,6]},
+ {t:'заря льётся в сад (почти повтор)',th:'с',f:[5,6]},
+ {t:'река несёт листья',th:'п',f:[7,8]},
+ {t:'время течёт медленно',th:'в',f:[9,10]},
+ {t:'мысль ищет слово',th:'м',f:[11,12]},
+ {t:'и вообще всё хорошо',th:'м',f:[]}
+].map(function(p,i){p.id=i+1;p.gone=false;p.merged=false;return p;});}
+var P=[],I0=0,eps=0.1,run=true,noGate=false,rej=0,logL=[],traj=[],done=false,acc=0,last=0;
+function facts(ps){var s={};for(var i=0;i<ps.length;i++)if(!ps[i].gone)for(var j=0;j<ps[i].f.length;j++)s[ps[i].f[j]]=1;return Object.keys(s).length;}
+function alive(){return P.filter(function(p){return !p.gone;});}
+function reset(){P=mkP();I0=facts(P);rej=0;logL=[];done=false;traj=[[alive().length,1]];}
+function addLog(s){logL.unshift(s);if(logL.length>5)logL.pop();}
+function tryOp(){var av=alive();if(av.length<=2){done=true;return;}
+ var I=facts(P);
+ // кандидаты
+ var ops=[];
+ // 1) дубль: факты ⊆ покрытия остальных
+ for(var i=0;i<av.length;i++){var p=av[i];var others={};
+  for(var j=0;j<av.length;j++)if(j!==i)for(var k=0;k<av[j].f.length;k++)others[av[j].f[k]]=1;
+  var sub=true;for(k=0;k<p.f.length;k++)if(!others[p.f[k]])sub=false;
+  if(sub)ops.push({kind:'dup',p:p,loss:0,dk:1});}
+ // 2) слияние двух фраз одной темы (теряет ~30% объединения)
+ for(i=0;i<av.length;i++)for(j=i+1;j<av.length;j++){if(av[i].th!==av[j].th||av[i].merged||av[j].merged)continue;
+  var un={};for(k=0;k<av[i].f.length;k++)un[av[i].f[k]]=1;for(k=0;k<av[j].f.length;k++)un[av[j].f[k]]=1;
+  var uk=Object.keys(un);var keep=Math.ceil(uk.length*0.7);
+  // потеря = сколько фактов исчезнет из ОБЩЕГО покрытия
+  var others2={};for(var m=0;m<av.length;m++)if(m!==i&&m!==j)for(k=0;k<av[m].f.length;k++)others2[av[m].f[k]]=1;
+  var lost=0;for(k=keep;k<uk.length;k++)if(!others2[uk[k]])lost++;
+  ops.push({kind:'merge',a:av[i],b:av[j],keepF:uk.slice(0,keep).map(Number),loss:lost,dk:1});}
+ // 3) удаление с потерей
+ for(i=0;i<av.length;i++){var p3=av[i];var others3={};
+  for(j=0;j<av.length;j++)if(j!==i)for(k=0;k<av[j].f.length;k++)others3[av[j].f[k]]=1;
+  var lost3=0;for(k=0;k<p3.f.length;k++)if(!others3[p3.f[k]])lost3++;
+  if(lost3>0)ops.push({kind:'del',p:p3,loss:lost3,dk:1});}
+ if(!ops.length){done=true;return;}
+ // жадный выбор: min потеря, потом max сжатие
+ ops.sort(function(a,b){return a.loss-b.loss||b.dk-a.dk;});
+ var op=ops[0];
+ var newI=I-op.loss;
+ // ГЕЙТ
+ if(!noGate&&newI<(1-eps)*I0){rej++;
+  addLog('✋ <b>ГЕЙТ ОТКЛОНИЛ</b> '+(op.kind==='merge'?'слияние «'+op.a.t+'»+«'+op.b.t+'»':'удаление «'+op.p.t+'»')+': потеря '+op.loss+' фактов → I упадёт до '+Math.round(newI/I0*100)+'% < '+(Math.round((1-eps)*100))+'% — <b>рационализация завершена</b>');
+  done=true;FX.blip(180,0.06,'sawtooth');return;}
+ // применить
+ if(op.kind==='dup'){op.p.gone=true;addLog('✂ дубль «'+op.p.t+'» удалён — ΔI=0, гейт доволен');FX.blip(420,0.03);}
+ else if(op.kind==='merge'){op.a.gone=true;op.b.gone=true;
+  P.push({id:P.length+1,t:'⚗ '+GEN[op.a.th]+': обобщение «'+op.a.t.split(' ')[0]+'»+«'+op.b.t.split(' ')[0]+'»',th:op.a.th,f:op.keepF,gone:false,merged:true});
+  addLog('⚗ слияние → обобщение (потеря '+op.loss+' фактов'+(noGate?'; гейт ВЫКЛЮЧЕН':', гейт пропустил')+')');FX.chord([392,523],0.04);}
+ else {op.p.gone=true;addLog('✂ удалена «'+op.p.t+'» (потеря '+op.loss+' фактов'+(noGate?'; гейт ВЫКЛЮЧЕН':', гейт пропустил')+')');FX.blip(300,0.04);}
+ traj.push([alive().length,facts(P)/I0]);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function drawTr(){var c=document.getElementById('mrd-tr');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||170;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var x0=44,x1=W-16,y0=16,y1=H-30;
+ // зона гейта
+ var gy=y1-(1-eps)*(y1-y0);
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.1;ctx.fillRect(x0,gy,x1-x0,y1-gy);ctx.globalAlpha=1;
+ ctx.strokeStyle='#D85A30';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x0,gy);ctx.lineTo(x1,gy);ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+ var maxK=10;
+ function X(k){return x0+(k/maxK)*(x1-x0);}function Y(v){return y1-v*(y1-y0);}
+ ctx.strokeStyle='#1D9E75';ctx.lineWidth=2.5;ctx.beginPath();
+ for(var i=0;i<traj.length;i++){var p=traj[i];if(i===0)ctx.moveTo(X(p[0]),Y(p[1]));else ctx.lineTo(X(p[0]),Y(p[1]));}
+ ctx.stroke();
+ if(traj.length){var lp=traj[traj.length-1];ctx.fillStyle=lp[1]>=(1-eps)?'#1D9E75':'#D85A30';ctx.beginPath();ctx.arc(X(lp[0]),Y(lp[1]),6,0,6.283);ctx.fill();}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('траектория (K фраз → I% информации) · сжатие идёт влево',x0,H-8);
+ ctx.fillStyle='#D85A30';ctx.textAlign='right';ctx.fillText('ниже пунктира = запрещено гейтом (1−ε)',x1,gy-5);ctx.textAlign='start';}
+function render(){drawTr();var av=alive();var I=facts(P);
+ document.getElementById('mrd-k').textContent=av.length+' / 10';
+ var e=document.getElementById('mrd-i');if(e){var pc=Math.round(I/I0*100);e.innerHTML='<span style="color:'+(I>=(1-eps)*I0?'#1D9E75':'#D85A30')+'">'+pc+'%</span>';}
+ document.getElementById('mrd-cr').textContent=Math.round((1-av.length/10)*100)+'%';
+ document.getElementById('mrd-rej').textContent=rej;
+ e=document.getElementById('mrd-st');if(e)e.innerHTML=done?(noGate?'<span style="color:#D85A30">сжато в труху — гейта не было</span>':'<span style="color:#1D9E75">✓ рационализация завершена честно</span>'):'';
+ e=document.getElementById('mrd-txt');if(e){var h='';for(var i=0;i<P.length;i++){var p=P[i];
+  var fc='';for(var j=0;j<p.f.length;j++)fc+='<span class="fc">ф'+p.f[j]+'</span>';
+  h+='<div class="ph'+(p.gone?' gone':'')+'">'+(p.gone?'':'• ')+p.t+' '+fc+(p.f.length===0?' <span class="fc" style="color:#D85A30">пусто</span>':'')+'</div>';}
+  e.innerHTML=h;}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.012);
+ if(run&&!done){acc+=dt;if(acc>=1.3){acc=0;tryOp();}}
+ render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ рационализация':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-ng').onclick=function(){noGate=!noGate;this.className='btn'+(noGate?' danger':'');this.textContent=noGate?'☠ ГЕЙТ ВЫКЛЮЧЕН':'☠ без гейта';reset();};
+$('mrd-e').oninput=function(){eps=parseFloat(this.value);$('mrd-ev').textContent=Math.round(eps*100)+'%';};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',drawTr);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

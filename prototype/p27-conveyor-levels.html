@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Конвейер: уровни-головоломки (F5–F6)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:660px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.goal{border:1px solid var(--border);border-left:4px solid #1D9E75;border-radius:0 8px 8px 0;padding:8px 12px;font-size:13px;margin-bottom:10px}
+#mrd-canvas{display:block;width:100%;height:360px;border:1px solid var(--border);border-radius:12px;touch-action:none;background:var(--surface-2)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}
+.btn:disabled{opacity:.45;cursor:default}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.insp{margin-top:10px;border:1px solid var(--border);border-radius:10px;padding:9px 12px;background:var(--surface-1);font-size:13px;min-height:18px}
+.insp select{font-size:13px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-primary);margin:0 2px}
+.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:8px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Конвейер: уровни-головоломки</div>
+<div class="sub">источник и сток заблокированы; собери цепочку реакторов/фильтров в рамках бюджета, чтобы доставить целевой класс</div>
+<div class="goal" id="mrd-goal">—</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="row"><span class="stat" style="color:var(--text-secondary)">добавить:</span>
+<button class="btn" id="mrd-rea">+ реактор</button><button class="btn" id="mrd-fil">+ фильтр</button>
+<button class="btn" id="mrd-restart">↻ заново</button><button class="btn" id="mrd-next" disabled>следующий ▶</button></div>
+<div class="insp" id="mrd-insp">Выберите узел, чтобы править его правило.</div>
+<div class="row"><span class="stat">бюджет: <b id="mrd-bud">0</b></span><span class="stat">доставлено в цель: <b id="mrd-score">0</b> / <b id="mrd-need">0</b></span></div>
+<div class="note">Реактор: ЕСЛИ класс … ТО класс +1/−1/=. Фильтр пропускает по условию. Файл: prototype/p27-conveyor-levels.html</div>
+</div><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var TC={source:'#1D9E75',reactor:'#7F77DD',filter:'#EF9F27',sink:'#D85A30'};
+var LEVELS=[
+ {src:0,tgt:2,budget:2,goal:4,hint:'из C0 собери C2 (подсказка: два реактора «класс +1»)'},
+ {src:4,tgt:2,budget:2,goal:4,hint:'из C4 собери C2 (два реактора «класс −1»)'},
+ {src:0,tgt:3,budget:3,goal:5,hint:'из C0 собери C3 (цепочка из трёх «+1»)'},
+ {src:5,tgt:1,budget:4,goal:5,hint:'из C5 собери C1 (четыре «−1»)'},
+ {src:1,tgt:4,budget:4,goal:6,hint:'из C1 собери C4 — выстрой свою цепочку'}];
+var NW=112,NH=48,W=0,H=0,nodes=[],edges=[],toks=[],idc=1,last=0,score=0,sel=null,cur=0,lv=null,won=false,msg='',msgT=0;
+var drag=null,link=null,downP=null,moved=false;
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA',fill:'#26262B',edge:'#888780'}:{ui:'#2C2C2A',fill:'#F7F6F2',edge:'#9A9A93'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||620;H=r.height||360;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);place();}
+function node(id){for(var i=0;i<nodes.length;i++)if(nodes[i].id===id)return nodes[i];return null;}
+function mkNode(type){var n={id:idc++,type:type,x:0,y:0};if(type==='source'){n.cls=0;n.rate=1.0;n.acc=0;}if(type==='reactor'){n.op='any';n.val=2;n.eff='up';n.effv=3;}if(type==='filter'){n.op='ge';n.val=2;}if(type==='sink')n.tgt=2;return n;}
+function place(){for(var i=0;i<nodes.length;i++){if(nodes[i].type==='source'){nodes[i].x=24;nodes[i].y=H/2-NH/2;}if(nodes[i].type==='sink'){nodes[i].x=W-NW-16;nodes[i].y=H/2-NH/2;}}}
+function added(){var c=0;for(var i=0;i<nodes.length;i++)if(!nodes[i].locked)c++;return c;}
+function load(i){cur=i;lv=LEVELS[i];nodes=[];edges=[];toks=[];idc=1;score=0;sel=null;won=false;
+ var s=mkNode('source');s.cls=lv.src;s.locked=true;var k=mkNode('sink');k.tgt=lv.tgt;k.locked=true;nodes.push(s,k);place();
+ var nx=document.getElementById('mrd-next');if(nx)nx.disabled=true;renderInsp();goalTxt();}
+function goalTxt(){var g=document.getElementById('mrd-goal');if(g)g.innerHTML='<b>Уровень '+(cur+1)+'/'+LEVELS.length+'.</b> '+lv.hint+' · бюджет узлов: '+lv.budget+' · доставить: '+lv.goal;}
+function tryAdd(type){if(won)return;if(added()>=lv.budget){flash('бюджет узлов исчерпан');return;}var n=mkNode(type);n.x=140+added()*40;n.y=40;nodes.push(n);sel=n.id;renderInsp();}
+function flash(t){msg=t;msgT=1.5;}
+function outP(n){return {x:n.x+NW,y:n.y+NH/2};}function inP(n){return {x:n.x,y:n.y+NH/2};}
+function emit(n){var t={cls:n.cls,x:0,y:0,edge:-1,t:0,from:null,to:null,target:0,alive:true};var o=outP(n);t.x=o.x;t.y=o.y;if(route(t,n.id))toks.push(t);}
+function route(t,nid){for(var i=0;i<edges.length;i++)if(edges[i].a===nid){var nb=node(edges[i].b);if(!nb)continue;t.edge=i;t.from=outP(node(nid));t.to=inP(nb);t.t=0;t.target=nb.id;return true;}return false;}
+function cnd(n,cls){if(n.op==='any')return true;if(n.op==='le')return cls<=n.val;if(n.op==='ge')return cls>=n.val;return cls===n.val;}
+function arrive(t){var n=node(t.target);if(!n){t.alive=false;return;}
+ if(n.type==='reactor'){if(cnd(n,t.cls)){if(n.eff==='up')t.cls=Math.min(5,t.cls+1);else if(n.eff==='down')t.cls=Math.max(0,t.cls-1);else t.cls=n.effv;}}
+ else if(n.type==='filter'){if(!cnd(n,t.cls)){t.alive=false;return;}}
+ else if(n.type==='sink'){if(t.cls===n.tgt){score++;if(!won&&score>=lv.goal){won=true;var nx=document.getElementById('mrd-next');if(nx)nx.disabled=(cur>=LEVELS.length-1);}}t.alive=false;return;}
+ if(!route(t,n.id))t.alive=false;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ for(var i=0;i<nodes.length;i++)if(nodes[i].type==='source'){nodes[i].acc+=dt;if(nodes[i].acc>=nodes[i].rate){nodes[i].acc=0;emit(nodes[i]);}}
+ for(i=toks.length-1;i>=0;i--){var t=toks[i];if(!t.alive){toks.splice(i,1);continue;}var e=edges[t.edge];if(!e){t.alive=false;toks.splice(i,1);continue;}
+  var len=Math.hypot(t.to.x-t.from.x,t.to.y-t.from.y)||1;t.t+=dt*120/len;t.x=t.from.x+(t.to.x-t.from.x)*Math.min(1,t.t);t.y=t.from.y+(t.to.y-t.from.y)*Math.min(1,t.t);
+  if(t.t>=1){arrive(t);if(!t.alive)toks.splice(i,1);}}
+ if(msgT>0)msgT-=dt;draw();hud();requestAnimationFrame(loop);}
+function nlabel(n){if(n.type==='source')return['Источник','C'+n.cls];if(n.type==='reactor')return['Реактор',n.eff==='up'?'класс ▲':n.eff==='down'?'класс ▼':'класс =C'+n.effv];
+ if(n.type==='filter')return['Фильтр',(n.op==='any'?'все':(n.op==='le'?'≤':n.op==='ge'?'≥':'=')+'C'+n.val)];return['Сток','цель C'+n.tgt];}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);
+ ctx.strokeStyle=t.edge;ctx.lineWidth=2;for(var i=0;i<edges.length;i++){var a=node(edges[i].a),b=node(edges[i].b);if(!a||!b)continue;var p=outP(a),q=inP(b);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.bezierCurveTo(p.x+36,p.y,q.x-36,q.y,q.x,q.y);ctx.stroke();}
+ if(link){ctx.strokeStyle='#1D9E75';ctx.setLineDash([5,4]);var p=outP(node(link.from));ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(link.mx,link.my);ctx.stroke();ctx.setLineDash([]);}
+ for(i=0;i<toks.length;i++){var tk=toks[i];ctx.fillStyle=colOf(tk.cls);ctx.beginPath();ctx.arc(tk.x,tk.y,6,0,TAU);ctx.fill();ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=2;ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.strokeText('C'+tk.cls,tk.x,tk.y+3);ctx.fillText('C'+tk.cls,tk.x,tk.y+3);ctx.textAlign='start';}
+ for(i=0;i<nodes.length;i++){var n=nodes[i],col=TC[n.type];ctx.fillStyle=t.fill;ctx.strokeStyle=(sel===n.id)?'#1D9E75':col;ctx.lineWidth=(sel===n.id)?3:2;rr(n.x,n.y,NW,NH,9);ctx.fill();ctx.stroke();
+  var lb=nlabel(n);ctx.fillStyle=col;ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText(lb[0],n.x+NW/2,n.y+19);ctx.fillStyle=t.ui;ctx.font='12px system-ui';ctx.fillText(lb[1],n.x+NW/2,n.y+36);ctx.textAlign='start';
+  if(n.type!=='source'){var ip=inP(n);ctx.fillStyle=t.edge;ctx.beginPath();ctx.arc(ip.x,ip.y,5,0,TAU);ctx.fill();}
+  if(n.type!=='sink'){var op=outP(n);ctx.fillStyle=col;ctx.beginPath();ctx.arc(op.x,op.y,5,0,TAU);ctx.fill();}
+  if(n.locked){ctx.fillStyle=t.edge;ctx.font='11px system-ui';ctx.textAlign='right';ctx.fillText('🔒',n.x+NW-6,n.y+13);ctx.textAlign='start';}
+  else{ctx.fillStyle=t.edge;ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText('✖',n.x+NW-11,n.y+13);ctx.textAlign='start';}}
+ if(msgT>0){ctx.fillStyle='#D85A30';ctx.globalAlpha=Math.min(1,msgT);ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(msg,W/2,24);ctx.globalAlpha=1;ctx.textAlign='start';}
+ if(won){ctx.fillStyle='rgba(29,158,117,0.18)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#1D9E75';ctx.textAlign='center';ctx.font='600 22px system-ui';ctx.fillText('Уровень пройден!',W/2,H/2-4);ctx.fillStyle=th().ui;ctx.font='13px system-ui';ctx.fillText(cur<LEVELS.length-1?'жми «следующий ▶»':'это был последний уровень',W/2,H/2+22);ctx.textAlign='start';}}
+function hud(){var e=document.getElementById('mrd-bud');if(e)e.textContent=(lv.budget-added())+' / '+lv.budget;
+ e=document.getElementById('mrd-score');if(e)e.textContent=score;e=document.getElementById('mrd-need');if(e)e.textContent=lv.goal;}
+function opt(v,l,cur){return '<option value="'+v+'"'+(v==cur?' selected':'')+'>'+l+'</option>';}
+function clsSel(id,c){var s='<select id="'+id+'">';for(var i=0;i<=5;i++)s+=opt(i,'C'+i,c);return s+'</select>';}
+function renderInsp(){var d=document.getElementById('mrd-insp');if(!d)return;if(!sel){d.innerHTML='Выберите узел, чтобы править его правило.';return;}var n=node(sel);if(!n){d.innerHTML='—';return;}
+ if(n.locked){d.innerHTML='<b style="color:'+TC[n.type]+'">'+nlabel(n)[0]+'</b> — заблокирован уровнем ('+(n.type==='source'?'выпускает C'+n.cls:'цель C'+n.tgt)+').';return;}
+ var h='<b style="color:'+TC[n.type]+'">'+nlabel(n)[0]+' #'+n.id+'</b> &nbsp; ';
+ if(n.type==='reactor')h+='ЕСЛИ класс <select id="i_op">'+opt('any','любой',n.op)+opt('le','≤',n.op)+opt('ge','≥',n.op)+opt('eq','=',n.op)+'</select> '+clsSel('i_val',n.val)+' ТО <select id="i_eff">'+opt('up','класс +1',n.eff)+opt('down','класс −1',n.eff)+opt('set','класс =',n.eff)+'</select> <span id="i_effvw">'+clsSel('i_effv',n.effv)+'</span>';
+ else h+='пропускать если класс <select id="i_op">'+opt('any','любой',n.op)+opt('le','≤',n.op)+opt('ge','≥',n.op)+opt('eq','=',n.op)+'</select> '+clsSel('i_val',n.val);
+ h+=' &nbsp; <button class="btn" id="i_del" style="padding:3px 10px">удалить</button>';d.innerHTML=h;wire(n);}
+function wire(n){function g(id){return document.getElementById(id);}
+ g('i_op').onchange=function(){n.op=this.value;};g('i_val').onchange=function(){n.val=+this.value;};
+ if(n.type==='reactor'){g('i_eff').onchange=function(){n.eff=this.value;g('i_effvw').style.display=this.value==='set'?'':'none';};g('i_effv').onchange=function(){n.effv=+this.value;};g('i_effvw').style.display=n.eff==='set'?'':'none';}
+ g('i_del').onclick=function(){del(n);};}
+function del(n){if(n.locked)return;nodes=nodes.filter(function(z){return z!==n;});edges=edges.filter(function(z){return z.a!==n.id&&z.b!==n.id;});if(sel===n.id){sel=null;renderInsp();}}
+function pos(e){var r=cvs.getBoundingClientRect();return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left,y:(e.touches?e.touches[0].clientY:e.clientY)-r.top};}
+function at(mx,my){for(var i=nodes.length-1;i>=0;i--){var n=nodes[i];if(mx>=n.x&&mx<=n.x+NW&&my>=n.y&&my<=n.y+NH)return n;}return null;}
+function hitOut(mx,my){for(var i=0;i<nodes.length;i++){var n=nodes[i];if(n.type==='sink')continue;var o=outP(n);if((mx-o.x)*(mx-o.x)+(my-o.y)*(my-o.y)<100)return n;}return null;}
+function down(e){var p=pos(e),o=hitOut(p.x,p.y);if(o){link={from:o.id,mx:p.x,my:p.y};return;}var n=at(p.x,p.y);
+ if(n){if(!n.locked&&p.x>=n.x+NW-22&&p.y<=n.y+22){del(n);return;}drag={n:n,dx:p.x-n.x,dy:p.y-n.y};downP=p;moved=false;}}
+function move(e){var p=pos(e);if(link){link.mx=p.x;link.my=p.y;}if(drag){if(Math.abs(p.x-downP.x)>3||Math.abs(p.y-downP.y)>3)moved=true;if(!drag.n.locked){drag.n.x=p.x-drag.dx;drag.n.y=p.y-drag.dy;}}}
+function up(e){if(link){var p=pos(e),tn=at(p.x,p.y);if(tn&&tn.id!==link.from&&tn.type!=='source'){var dup=false;for(var i=0;i<edges.length;i++)if(edges[i].a===link.from&&edges[i].b===tn.id)dup=true;if(!dup)edges.push({a:link.from,b:tn.id});}link=null;}
+ if(drag){if(!moved){sel=drag.n.id;renderInsp();}drag=null;}}
+cvs.addEventListener('mousedown',down);addEventListener('mousemove',move);addEventListener('mouseup',up);
+cvs.addEventListener('touchstart',function(e){down(e);},{passive:true});cvs.addEventListener('touchmove',function(e){move(e);e.preventDefault();},{passive:false});cvs.addEventListener('touchend',function(e){up(e);});
+document.getElementById('mrd-rea').onclick=function(){tryAdd('reactor');};document.getElementById('mrd-fil').onclick=function(){tryAdd('filter');};
+document.getElementById('mrd-restart').onclick=function(){load(cur);};
+document.getElementById('mrd-next').onclick=function(){if(cur<LEVELS.length-1)load(cur+1);};
+addEventListener('resize',rz);rz();load(0);requestAnimationFrame(loop);})();
+</script></body></html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Диспетчер Смысла»</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:560px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:420px;border:1px solid var(--border);border-radius:12px;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 12px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — «Диспетчер Смысла»</div>
+<div class="sub">замкнутый цикл: клик по слоту меняет реактор (• / ▲ +1 / ▼ −1). Настрой так, чтобы инфоны приходили на «тап» (вверху) нужным классом</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="row"><button class="btn" id="mrd-add">+ инфон</button>
+<span class="stat" style="color:var(--text-secondary)">тап:</span>
+<button class="btn" id="mrd-t1">C1</button><button class="btn on" id="mrd-t2">C2</button><button class="btn" id="mrd-t3">C3</button>
+<button class="btn" id="mrd-reset">↻ заново</button>
+<button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat">доставлено: <b id="mrd-done">0</b></span><span class="stat">рекорд: <b id="mrd-best">0</b></span><span class="stat">поток/с: <b id="mrd-rate">0</b></span>
+<span class="stat">инфонов: <b id="mrd-n">0</b></span></div>
+<div class="note">Хорошая схема даёт устойчивый поток без накопления у полюсов. Файл: prototype/p15-dispatcher.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var W=0,H=0,cx=0,cy=0,R=0,inf=[],slots=[0,0,0,0],ST=[0.2,0.4,0.6,0.8],target=2,done=0,tsec=0,last=0,hiBest=FX.best('meridian_dispatcher_best');
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA',tr:'#55554F',sl:'#2A2A2D'}:{ui:'#2C2C2A',tr:'#C4C2B8',sl:'#ECEAE3'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||520;H=r.height||420;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;R=Math.min(W,H)*0.34;}
+function pt(t){var a=t*TAU-Math.PI/2;return[cx+R*Math.cos(a),cy+R*Math.sin(a)];}
+function add(){inf.push({t:Math.random(),cls:1+((Math.random()*3)|0),ap:[false,false,false,false]});}
+function reset(){inf=[];for(var i=0;i<10;i++)add();slots=[0,0,0,0];done=0;tsec=0;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;tsec+=dt;
+ for(var i=0;i<inf.length;i++){var o=inf[i],nt=o.t+dt*0.12;
+  for(var s=0;s<4;s++)if(!o.ap[s]&&o.t<ST[s]&&nt>ST[s]){o.ap[s]=true;if(slots[s]===1)o.cls=Math.min(5,o.cls+1);else if(slots[s]===2)o.cls=Math.max(0,o.cls-1);}
+  if(nt>=1){if(o.cls===target){done++;FX.blip(660,0.05);hiBest=FX.best('meridian_dispatcher_best',done);}else{FX.blip(200,0.05,'sawtooth');}nt-=1;o.ap=[false,false,false,false];}o.t=nt;}
+ FX.ambient(0.015);draw();hud();requestAnimationFrame(loop);}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);ctx.strokeStyle=t.tr;ctx.lineWidth=5;ctx.beginPath();ctx.arc(cx,cy,R,0,TAU);ctx.stroke();
+ var tp=pt(0);var tc=colOf(target);ctx.fillStyle=tc;ctx.beginPath();ctx.arc(tp[0],tp[1],15,0,TAU);ctx.fill();
+ ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=3;ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText('тап',tp[0],tp[1]);ctx.fillText('тап',tp[0],tp[1]);ctx.textBaseline='alphabetic';
+ for(var sl=0;sl<4;sl++){var p=pt(ST[sl]);ctx.fillStyle=t.sl;ctx.strokeStyle=t.ui;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(p[0],p[1],15,0,TAU);ctx.fill();ctx.stroke();
+  ctx.fillStyle=t.ui;ctx.font='600 15px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(slots[sl]===0?'•':(slots[sl]===1?'▲':'▼'),p[0],p[1]);ctx.textBaseline='alphabetic';}
+ for(var i=0;i<inf.length;i++){var o=inf[i],p=pt(o.t);ctx.fillStyle=colOf(o.cls);ctx.beginPath();ctx.arc(p[0],p[1],8,0,TAU);ctx.fill();
+  ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=2.5;ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.strokeText('C'+o.cls,p[0],p[1]+3);ctx.fillText('C'+o.cls,p[0],p[1]+3);}
+ ctx.textAlign='start';}
+function hud(){var e;e=document.getElementById('mrd-done');if(e)e.textContent=done;
+ e=document.getElementById('mrd-rate');if(e)e.textContent=(done/Math.max(1,tsec)).toFixed(2);
+ e=document.getElementById('mrd-n');if(e)e.textContent=inf.length;
+ var _be=document.getElementById('mrd-best');if(_be)_be.textContent=Math.round(hiBest);}
+function setT(v,id){target=v;['mrd-t1','mrd-t2','mrd-t3'].forEach(function(x,i){var e=document.getElementById(x);if(e)e.className='btn'+((i+1===v)?' on':'');});done=0;tsec=0.0001;}
+cvs.addEventListener('click',function(e){var r=cvs.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+ for(var sl=0;sl<4;sl++){var p=pt(ST[sl]);if((mx-p[0])*(mx-p[0])+(my-p[1])*(my-p[1])<400){slots[sl]=(slots[sl]+1)%3;return;}}});
+document.getElementById('mrd-add').onclick=add;document.getElementById('mrd-reset').onclick=reset;
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+document.getElementById('mrd-t1').onclick=function(){setT(1,'mrd-t1');};document.getElementById('mrd-t2').onclick=function(){setT(2,'mrd-t2');};document.getElementById('mrd-t3').onclick=function(){setT(3,'mrd-t3');};
+addEventListener('resize',rz);reset();rz();requestAnimationFrame(loop);})();
+</script></body></html>

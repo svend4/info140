@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Гибридный кодификатор (число ↔ слово)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,'Cascadia Code',Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-cross{display:block;width:100%;height:170px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.msg{font-size:22px;font-weight:600;min-height:30px;letter-spacing:.3px}
+.lvl{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:170px}
+.bar{height:9px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:230px}.bar>i{display:block;height:100%;background:#1D9E75}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:2px}
+th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--border)}
+th{color:var(--text-secondary);font-weight:500}.mono{font-family:var(--mono)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Гибридный кодификатор</div>
+<div class="sub">один смысл в трёх представлениях: чистое число (точно, но непонятно) ↔ гибрид-конланг (живая зона) ↔ чистое слово (понятно, но размыто). Число поднимается, слово опускается — встреча на оперативно-тактическом уровне</div>
+<canvas id="mrd-cross"></canvas>
+<div class="panel"><h3 id="mrd-lh">Представление сообщения</h3><div class="msg" id="mrd-msg">—</div><div class="lvl" id="mrd-lvl"></div></div>
+<div class="row"><span style="color:var(--text-secondary)">представление:</span><span>число (код)</span>
+<input id="mrd-t" type="range" min="0" max="1" step="0.02" value="0.5" style="flex:1"><span>слово</span>
+<button class="btn" id="mrd-sweep">↔ свип</button><button class="btn" id="mrd-msgbtn">другая фраза</button></div>
+<div class="panel"><h3>Показатели представления</h3><div id="mrd-met">—</div></div>
+<div class="panel"><h3>ГОСТ-тезаурус: разбор токенов (код · слог · слово · теги)</h3><div id="mrd-tab">—</div></div>
+<div class="note">Конланг-цифра: код «тема.номер» → слоговой ключ темы + слоги номера (шифр цифра→слог). Гибрид «гор04» = и точно (04), и подсказывает смысл (гор=город). «Пригодность» = гармоническое среднее точности и понятности — максимум в середине (где число и слово встречаются). Полная спецификация стандарта — в docs/13 (считает рой). Файл: prototype/p40-hybrid-codifier.html</div>
+</div><script>
+(function(){
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+var STEM={1:'гор',2:'дви',3:'све',4:'мыс',5:'вре',6:'при'};
+var TNAME={1:'город',2:'движение',3:'свет',4:'смысл',5:'время',6:'природа'};
+var DSYL={'0':'ка','1':'ро','2':'ти','3':'не','4':'су','5':'ло','6':'ми','7':'та','8':'ве','9':'зу'};
+var C={
+ 'город':{w:'город',th:1,it:4,lv:1,tg:'г'},'улица':{w:'улица',th:1,it:11,lv:1,tg:'гд'},
+ 'поток':{w:'поток',th:2,it:7,lv:2,tg:'д'},'путь':{w:'путь',th:2,it:2,lv:2,tg:'дм'},
+ 'свет':{w:'свет',th:3,it:2,lv:2,tg:'с'},'заря':{w:'заря',th:3,it:6,lv:2,tg:'с'},
+ 'мысль':{w:'мысль',th:4,it:5,lv:4,tg:'м'},'идея':{w:'идея',th:4,it:9,lv:4,tg:'м'},'смысл':{w:'смысл',th:4,it:1,lv:4,tg:'м'},
+ 'время':{w:'время',th:5,it:1,lv:4,tg:'в'},'час':{w:'час',th:5,it:8,lv:2,tg:'в'},
+ 'река':{w:'река',th:6,it:3,lv:2,tg:'п'},'сад':{w:'сад',th:6,it:10,lv:2,tg:'п'}};
+var MSGS=[['город','поток','свет'],['время','река','заря'],['идея','путь','смысл'],['сад','час','мысль'],['свет','идея','город']];
+var mi=0,t=0.5,sweep=false,sd=1,last=0;
+function pad(n){return n<10?'0'+n:''+n;}
+function codeOf(c){return c.th+'.'+pad(c.it);}
+function hybridOf(c){return STEM[c.th]+pad(c.it);}
+function sylOf(c){var s=pad(c.it);return STEM[c.th]+DSYL[s[0]]+DSYL[s[1]];}
+function tok(c){if(t<0.34)return codeOf(c);if(t<0.67)return hybridOf(c);return c.w;}
+function P(){return Math.max(0.12,1-0.7*t);}
+function S(){return 0.3+0.7*t;}
+function U(){var p=P(),s=S();return 2*p*s/(p+s);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function cross(){var c=document.getElementById('mrd-cross');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||170;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var x0=46,x1=W-16,y0=26,y1=H-26;
+ function X(tt){return x0+tt*(x1-x0);}function Y(v){return y1-v*(y1-y0);}
+ // живая зона (середина)
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.10;ctx.fillRect(X(0.34),y0-6,X(0.67)-X(0.34),y1-y0+12);ctx.globalAlpha=1;
+ // оси подписи
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.stroke();
+ function line(fn,col){ctx.strokeStyle=col;ctx.lineWidth=2.5;ctx.beginPath();for(var i=0;i<=40;i++){var tt=i/40;var pv,sv,uv;var op=t;t=tt;pv=P();sv=S();uv=U();t=op;var v=fn(pv,sv,uv);if(i===0)ctx.moveTo(X(tt),Y(v));else ctx.lineTo(X(tt),Y(v));}ctx.stroke();}
+ line(function(p,s,u){return p;},'#378ADD'); // точность
+ line(function(p,s,u){return s;},'#EF9F27'); // понятность
+ line(function(p,s,u){return u;},'#1D9E75'); // пригодность
+ // маркер
+ var mx=X(t);ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(mx,y0-6);ctx.lineTo(mx,y1);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle='#1D9E75';ctx.beginPath();ctx.arc(mx,Y(U()),6,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('число·операц.',x0,H-8);ctx.textAlign='center';ctx.fillStyle='#1D9E75';ctx.fillText('гибрид·тактич. (встреча)',(x0+x1)/2,H-8);ctx.textAlign='right';ctx.fillStyle=uic;ctx.fillText('слово·стратег.',x1,H-8);
+ ctx.textAlign='left';ctx.fillStyle='#378ADD';ctx.fillText('точность',x0+4,y0+4);ctx.fillStyle='#EF9F27';ctx.fillText('понятность',x0+4,y0+18);ctx.fillStyle='#1D9E75';ctx.fillText('пригодность',x0+4,y0+32);ctx.textAlign='start';}
+function render(){cross();var msg=MSGS[mi].map(function(k){return tok(C[k]);});
+ var col=t<0.34?'var(--text-muted)':t<0.67?'#1D9E75':'var(--text-primary)';var mono=t<0.34?'mono':'';
+ var e=document.getElementById('mrd-msg');if(e){e.className='msg '+mono;e.style.color=col;e.textContent=msg.join(t<0.34?' · ':' ');}
+ var lab=t<0.34?'операционный · низкий уровень (чистое число/код)':t<0.67?'тактически-операционный · СРЕДНИЙ уровень (гибрид-конланг) — здесь число и слово встречаются':'стратегический · высокий уровень (чистое слово)';
+ e=document.getElementById('mrd-lvl');if(e)e.textContent=lab;
+ function brow(l,v,cc){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(v*100)+'%;background:'+cc+'"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+ e=document.getElementById('mrd-met');if(e)e.innerHTML=brow('точность / вычислимость',P(),'#378ADD')+brow('понятность / смысл',S(),'#EF9F27')+brow('пригодность (баланс)',U(),'#1D9E75');
+ var rows='<table><tr><th>слово</th><th>код</th><th>гибрид</th><th>слог-шифр</th><th>теги</th><th>lv</th></tr>';
+ for(var i=0;i<MSGS[mi].length;i++){var c=C[MSGS[mi][i]];rows+='<tr><td><b>'+c.w+'</b></td><td class="mono">'+codeOf(c)+'</td><td class="mono" style="color:#1D9E75">'+hybridOf(c)+'</td><td>'+sylOf(c)+'</td><td>'+c.tg+'</td><td style="color:'+colLv(c.lv)+'">'+c.lv+'</td></tr>';}
+ rows+='</table>';e=document.getElementById('mrd-tab');if(e)e.innerHTML=rows;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;if(sweep){t+=sd*dt*0.35;if(t>=1){t=1;sd=-1;}if(t<=0){t=0;sd=1;}document.getElementById('mrd-t').value=t;}render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-t').oninput=function(){t=parseFloat(this.value);sweep=false;$('mrd-sweep').className='btn';};
+$('mrd-sweep').onclick=function(){sweep=!sweep;this.className='btn'+(sweep?' on':'');};
+$('mrd-msgbtn').onclick=function(){mi=(mi+1)%MSGS.length;};
+requestAnimationFrame(loop);
+})();
+</script></body></html>

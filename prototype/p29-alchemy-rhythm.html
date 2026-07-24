@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN: Алхимия-ритм</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:430px;border:1px solid var(--border);border-radius:12px;touch-action:none}
+.lam{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text-secondary)}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 13px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN: Алхимия-ритм</div>
+<div class="sub">метроном держит бит. Инфоны едут к зоне попадания — жми ПРОБЕЛ/клик В ТАКТ и доводи их до цели реакцией ▲ слить / ▼ дробить.</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam"><span>дробление</span><input id="mrd-lam" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span>обобщение</span><span style="min-width:54px">λ=<b id="mrd-lamv" style="color:var(--text-primary)">0.50</b></span></div>
+<div class="row">
+<button class="btn on" id="mrd-merge">▲ слить</button><button class="btn" id="mrd-split">▼ дробить</button>
+<button class="btn" id="mrd-snd">♪ звук</button><button class="btn" id="mrd-reset">↻ заново</button>
+<span class="stat">цель: <b id="mrd-tgt">—</b></span>
+<span class="stat">очки: <b id="mrd-score">0</b></span><span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat">комбо: <b id="mrd-cmb">0</b></span></div>
+<div class="note">Реакция применяется к ближайшему к зоне инфону. Слить +1 класс (нужны двое рядом), дробить −1 класс. Доведи к выходу до целевого класса. Точный бит ×комбо ×близость λ к центру = больше очков. Файл: prototype/p29-alchemy-rhythm.html</div>
+</div>
+<script src="lib/mrd-fx.js"></script>
+<script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var W=0,H=0,lam=0.5,last=0,mode=1; // mode 1=слить, -1=дробить
+var BPM=84,beat=60/BPM,phase=0,prevPh=0; // фаза бита 0..1
+var lane=0,zoneX=0,exitX=0,spawnX=0,speed=0;
+var P=[],fl=[],score=0,best=0,combo=0,over=false,tgt=2,spawnAcc=0,pulse=0;
+best=FX.best('meridian_alchrhythm_best',0)||0;
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||560;H=r.height||430;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+ lane=H*0.5;zoneX=W*0.72;exitX=W-18;spawnX=-24;speed=(zoneX-spawnX)/(beat*4);} // 4 бита до зоны
+function mk(){return {x:spawnX,cls:1+((Math.random()*2)|0),r:13,hit:false,fade:1};}
+function reset(){P=[];fl=[];score=0;combo=0;over=false;spawnAcc=0;phase=0;prevPh=0;tgt=2+((Math.random()*3)|0);}
+function flash(x,y,t,c){fl.push({x:x,y:y,t:t,c:c,life:0.9});}
+function nearest(){var best=null,bd=1e9;for(var i=0;i<P.length;i++){var o=P[i];if(o.hit)continue;var d=Math.abs(o.x-zoneX);if(d<bd){bd=d;best=o;}}return best?{o:best,d:bd}:null;}
+function act(){if(over)return;var n=nearest();
+ // окно попадания по времени: близость фазы к доле бита
+ var off=Math.min(phase,1-phase); // 0=точно в бит
+ var timing=off<0.10?'perfect':off<0.20?'good':'miss';
+ var M=4*lam*(1-lam);
+ if(timing==='miss'||!n){combo=0;flash(zoneX,lane-40,'мимо такта','#888780');FX.blip(160,0.05,'sawtooth');pulse=0.4;return;}
+ var o=n.o;
+ if(mode===1){ // слить: нужен сосед рядом
+  var mate=null,md=1e9;for(var i=0;i<P.length;i++){var q=P[i];if(q===o||q.hit)continue;var d=Math.abs(q.x-o.x);if(d<46&&d<md){md=d;mate=q;}}
+  if(!mate||o.cls>=5){combo=0;flash(o.x,lane-40,'нет пары','#D85A30');FX.blip(220,0.05);pulse=0.3;return;}
+  o.cls=Math.min(5,Math.max(o.cls,mate.cls)+1);o.x=(o.x+mate.x)/2;mate.hit=true;mate.fade=0.5;
+  flash(o.x,lane-44,'слияние','#1D9E75');FX.chord(440,0.06);
+ } else { // дробить
+  if(o.cls<=0){combo=0;flash(o.x,lane-40,'некуда дробить','#D85A30');FX.blip(220,0.05);pulse=0.3;return;}
+  o.cls=o.cls-1;flash(o.x,lane-44,'дробление','#378ADD');FX.blip(560,0.05,'triangle');
+ }
+ combo++;
+ var tb=timing==='perfect'?3:1.5; // бонус за точность
+ var prox=1-Math.abs(0.5-lam)*2; // близость λ к центру 0..1
+ var add=Math.round((10+combo*2)*tb*(0.5+0.7*M)*(0.6+0.6*prox));
+ score+=add;flash(o.x,lane+34,'+'+add,'#EF9F27');pulse=1;
+}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;var M=4*lam*(1-lam);
+ if(!over){
+  prevPh=phase;phase=(phase+dt/beat)%1;if(phase<prevPh){FX.blip(330,0.03,'sine');pulse=Math.max(pulse,0.5);} // тик метронома
+  spawnAcc+=dt;if(spawnAcc>=beat){spawnAcc-=beat;P.push(mk());}
+  for(var i=P.length-1;i>=0;i--){var o=P[i];o.x+=speed*dt;
+   if(o.hit){o.fade-=dt*2;if(o.fade<=0){P.splice(i,1);continue;}}
+   if(!o.hit&&o.x>=exitX){ // выход: проверка цели
+    if(o.cls===tgt){score+=15;combo++;flash(o.x,lane-30,'цель!','#1D9E75');FX.chord(660,0.07);}
+    else{combo=0;flash(o.x,lane-30,'не цель','#D85A30');FX.blip(140,0.06,'sawtooth');if(score>0)score=Math.max(0,score-5);}
+    o.hit=true;o.fade=0.4;}
+  }
+ }
+ pulse=Math.max(0,pulse-dt*2.5);
+ FX.ambient(0.03*M);FX.freq(110+lam*160);
+ for(i=fl.length-1;i>=0;i--){fl[i].life-=dt;fl[i].y-=14*dt;if(fl[i].life<=0)fl.splice(i,1);}
+ if(score>best){best=FX.best('meridian_alchrhythm_best',score);}
+ draw(M);hud();requestAnimationFrame(loop);}
+function draw(M){ctx.clearRect(0,0,W,H);
+ // дорожка
+ ctx.strokeStyle=getCss('--border');ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,lane);ctx.lineTo(W,lane);ctx.stroke();
+ // зона попадания
+ var beatW=Math.min(phase,1-phase)<0.10;
+ ctx.fillStyle=beatW?'rgba(29,158,117,0.20)':'rgba(127,119,221,0.10)';ctx.fillRect(zoneX-26,lane-60,52,120);
+ ctx.strokeStyle=beatW?'#1D9E75':'#7F77DD';ctx.lineWidth=2;ctx.strokeRect(zoneX-26,lane-60,52,120);
+ // выход
+ ctx.strokeStyle='#EF9F27';ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(exitX,lane-60);ctx.lineTo(exitX,lane+60);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle=getCss('--text-muted');ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillText('зона',zoneX,lane-68);ctx.fillText('выход',exitX,lane-68);
+ // инфоны
+ for(var i=0;i<P.length;i++){var o=P[i];ctx.globalAlpha=o.hit?Math.max(0,o.fade):1;
+  var r=o.cls===tgt?o.r+2:o.r;ctx.fillStyle=colOf(o.cls);ctx.beginPath();ctx.arc(o.x,lane,r,0,TAU);ctx.fill();
+  if(o.cls===tgt){ctx.strokeStyle='#1D9E75';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(o.x,lane,r+4,0,TAU);ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=2;ctx.font='bold 11px system-ui';ctx.textBaseline='middle';
+  ctx.strokeText('C'+o.cls,o.x,lane);ctx.fillText('C'+o.cls,o.x,lane);ctx.textBaseline='alphabetic';}
+ ctx.globalAlpha=1;ctx.textAlign='start';
+ // флэши
+ for(i=0;i<fl.length;i++){var f=fl[i];ctx.fillStyle=f.c;ctx.globalAlpha=Math.min(1,f.life*1.3);ctx.font='600 14px system-ui';ctx.textAlign='center';ctx.fillText(f.t,f.x,f.y);ctx.globalAlpha=1;ctx.textAlign='start';}
+ // полоса бита
+ var bx=14,bw=W-28,by=H-22;ctx.fillStyle='rgba(127,119,221,0.18)';ctx.fillRect(bx,by,bw,8);
+ ctx.fillStyle='#7F77DD';var px=bx+bw*phase;ctx.fillRect(px-2,by-3,4,14);
+ // окно попадания на полосе (вокруг бита 0 и 1)
+ ctx.fillStyle='rgba(29,158,117,0.5)';ctx.fillRect(bx,by,bw*0.10,8);ctx.fillRect(bx+bw*0.90,by,bw*0.10,8);
+ // пульс бита (рамка)
+ if(pulse>0){ctx.strokeStyle='rgba(29,158,117,'+(pulse*0.5)+')';ctx.lineWidth=3;ctx.strokeRect(2,2,W-4,H-4);}
+}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v)||'#888';}
+function hud(){var e;e=document.getElementById('mrd-lamv');if(e)e.textContent=lam.toFixed(2);
+ e=document.getElementById('mrd-tgt');if(e){e.textContent='C'+tgt;e.style.color=colOf(tgt);}
+ e=document.getElementById('mrd-score');if(e)e.textContent=score;
+ e=document.getElementById('mrd-best');if(e)e.textContent=Math.round(best);
+ e=document.getElementById('mrd-cmb');if(e)e.textContent=combo;}
+// ввод
+function trigger(){if(over){reset();return;}act();}
+addEventListener('keydown',function(e){if(e.code==='Space'){e.preventDefault();trigger();}
+ if(e.key==='ArrowUp'){setMode(1);}if(e.key==='ArrowDown'){setMode(-1);}});
+cvs.addEventListener('pointerdown',function(e){e.preventDefault();trigger();});
+function setMode(m){mode=m;document.getElementById('mrd-merge').className='btn'+(m===1?' on':'');document.getElementById('mrd-split').className='btn'+(m===-1?' on':'');}
+document.getElementById('mrd-merge').onclick=function(){setMode(1);};
+document.getElementById('mrd-split').onclick=function(){setMode(-1);};
+document.getElementById('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');};
+document.getElementById('mrd-reset').onclick=reset;
+var sl=document.getElementById('mrd-lam');sl.oninput=function(){lam=parseFloat(sl.value);};
+addEventListener('resize',rz);rz();reset();setMode(1);requestAnimationFrame(loop);})();
+</script></body></html>

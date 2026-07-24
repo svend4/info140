@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Дыхание Цветка» (Проход 5)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--radius:8px;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}
+@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}
+.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:460px;border:1px solid var(--border);border-radius:12px;cursor:ns-resize}
+.lam{display:flex;align-items:center;gap:10px;margin-top:12px}
+.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:var(--radius);padding:6px 14px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}
+.stat b{color:var(--text-primary);font-weight:500}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="h1">MERIDIAN — «Дыхание Цветка»</div>
+<div class="sub">веди λ ползунком или мышью по холсту (вверх — слияние, вниз — дробление); удержи середину — узор раскроется</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam">
+<span class="stat" style="color:var(--text-secondary)">выдох · дробление</span>
+<input id="mrd-lambda" type="range" min="0.02" max="0.98" step="0.01" value="0.5">
+<span class="stat" style="color:var(--text-secondary)">вдох · слияние</span>
+</div>
+<div class="row">
+<button class="btn" id="mrd-sound">♪ звук: выкл</button>
+<button class="btn" id="mrd-reset">↻ заново</button>
+<span class="stat">дыхание: <b id="mrd-breath">0</b>/7</span>
+<span class="stat">λ: <b id="mrd-lam">0.50</b></span>
+<span class="stat">M(λ): <b id="mrd-m">0.00</b></span>
+</div>
+<div class="note">Нет победы и поражения. Удержание λ≈0.5 копит «дыхание»; каждое раскрывает слой узора и строку. Файл: prototype/p10-anthos-breath.html</div>
+</div>
+<script>
+(function(){
+  var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+  var ctx=cvs.getContext('2d');var TAU=Math.PI*2;
+  var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+  function colOf(cls){return RAMP[5-cls];}
+  var LINES=['Между шумом и тишиной рождается голос.',
+    'Слишком дробно — и слово рассыпается в песок.',
+    'Слишком цельно — и мир сжимается в одну точку.',
+    'Дыши: вдох собирает, выдох освобождает.',
+    'Смысл живёт не в частях и не в целом, а в их связи.',
+    'Удержи середину — и узор раскроется сам.',
+    'Это и есть жизнь: колебание, что не падает в покой.'];
+  var st={lambda:0.5,target:0.5,sound:false};
+  var W=0,H=0,cx=0,cy=0,Rpix=0,parts=[],last=0,rot=0,breath=0,centerAcc=0,tt=0;
+  var FL=[[0,0]];
+  (function(){var k,a;for(k=0;k<6;k++){a=k*Math.PI/3;FL.push([Math.cos(a),Math.sin(a)]);}
+   for(k=0;k<6;k++){a=Math.PI/6+k*Math.PI/3;FL.push([Math.sqrt(3)*Math.cos(a),Math.sqrt(3)*Math.sin(a)]);}
+   for(k=0;k<6;k++){a=k*Math.PI/3;FL.push([2*Math.cos(a),2*Math.sin(a)]);}})();
+  var actx=null,osc=null,gain=null;
+  function initAudio(){if(actx)return;try{actx=new (window.AudioContext||window.webkitAudioContext)();osc=actx.createOscillator();gain=actx.createGain();gain.gain.value=0;osc.type='sine';osc.frequency.value=220;osc.connect(gain);gain.connect(actx.destination);osc.start();}catch(e){actx=null;}}
+  function theme(){var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return d?{ui:'#E8E8EA',flower:'#AFA9EC'}:{ui:'#2C2C2A',flower:'#7F77DD'};}
+  function resize(){var r=cvs.getBoundingClientRect();var dpr=window.devicePixelRatio||1;
+    W=r.width||560;H=r.height||460;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;Rpix=Math.min(W,H)/2-20;}
+  function reset(){parts=[];for(var i=0;i<170;i++){var br=0.12+0.84*Math.sqrt(Math.random());
+    parts.push({ang:Math.random()*TAU,br:br,cls:Math.round((1-br)*5),jp:Math.random()*TAU,sp:0.1+0.3*(1-br)});}
+    breath=0;centerAcc=0;}
+  function draw(dt){var t=theme(),L=st.lambda,M=4*L*(1-L);ctx.clearRect(0,0,W,H);
+    var layers=Math.min(FL.length,7+breath*2);var rF=Rpix*0.17*(0.96+0.08*L);
+    ctx.lineWidth=1.1;ctx.strokeStyle=t.flower;
+    for(var i=0;i<layers;i++){ctx.globalAlpha=0.10+0.45*M;ctx.beginPath();ctx.arc(cx+FL[i][0]*rF,cy+FL[i][1]*rF,rF,0,TAU);ctx.stroke();}
+    ctx.globalAlpha=1;
+    for(var p=0;p<parts.length;p++){var o=parts[p];var rad=o.br*(1.05-L*0.95)+Math.sin(tt*1.3+o.jp)*0.02*(1-L);
+      var ang=o.ang+rot*o.sp;var x=cx+rad*Rpix*Math.cos(ang),y=cy+rad*Rpix*Math.sin(ang);
+      ctx.fillStyle=colOf(o.cls);ctx.globalAlpha=0.25+0.65*M;ctx.beginPath();ctx.arc(x,y,2.4,0,TAU);ctx.fill();}
+    ctx.globalAlpha=1;ctx.fillStyle=colOf(0);ctx.beginPath();ctx.arc(cx,cy,3+5*L,0,TAU);ctx.fill();
+    if(breath>0){ctx.fillStyle=t.ui;ctx.globalAlpha=0.85;ctx.textAlign='center';ctx.font='italic 16px Georgia,serif';
+      ctx.fillText(LINES[Math.min(breath,7)-1],cx,H-26);ctx.globalAlpha=1;ctx.textAlign='start';}
+    var inCenter=Math.abs(L-0.5)<0.12;
+    ctx.fillStyle=inCenter?'#1D9E75':t.ui;ctx.globalAlpha=0.5;ctx.textAlign='center';ctx.font='12px system-ui';
+    ctx.fillText(inCenter?'…дыхание собирается…':'веди λ к центру',cx,26);ctx.globalAlpha=1;ctx.textAlign='start';}
+  function hud(){var L=st.lambda,M=4*L*(1-L),e;
+    e=document.getElementById('mrd-lam');if(e)e.textContent=L.toFixed(2);
+    e=document.getElementById('mrd-m');if(e)e.textContent=M.toFixed(2);
+    e=document.getElementById('mrd-breath');if(e)e.textContent=breath;
+    var s=document.getElementById('mrd-lambda');if(s&&Math.abs(parseFloat(s.value)-st.lambda)>0.01)s.value=st.lambda;}
+  function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;tt+=dt;rot+=dt*0.15;
+    st.lambda+=(st.target-st.lambda)*Math.min(1,dt*3);
+    var L=st.lambda,M=4*L*(1-L);
+    if(Math.abs(L-0.5)<0.12){centerAcc+=dt;if(centerAcc>=3&&breath<7){breath++;centerAcc=0;}}else centerAcc*=0.98;
+    if(actx&&osc){var g=st.sound?0.05*M:0;gain.gain.setTargetAtTime(g,actx.currentTime,0.1);osc.frequency.setTargetAtTime(170+L*150,actx.currentTime,0.1);}
+    draw(dt);hud();requestAnimationFrame(loop);}
+  function $(id){return document.getElementById(id);}
+  function setFromY(y){st.target=Math.max(0.02,Math.min(0.98,1-y/H));}
+  var dragging=false;
+  cvs.addEventListener('mousedown',function(e){dragging=true;initAudio();var r=cvs.getBoundingClientRect();setFromY(e.clientY-r.top);});
+  window.addEventListener('mouseup',function(){dragging=false;});
+  cvs.addEventListener('mousemove',function(e){if(dragging){var r=cvs.getBoundingClientRect();setFromY(e.clientY-r.top);}});
+  cvs.addEventListener('touchstart',function(e){initAudio();var r=cvs.getBoundingClientRect();setFromY(e.touches[0].clientY-r.top);},{passive:true});
+  cvs.addEventListener('touchmove',function(e){var r=cvs.getBoundingClientRect();setFromY(e.touches[0].clientY-r.top);},{passive:true});
+  var lb=$('mrd-lambda');if(lb)lb.oninput=function(){st.target=parseFloat(lb.value);};
+  $('mrd-sound').onclick=function(){initAudio();st.sound=!st.sound;this.textContent=st.sound?'♪ звук: вкл':'♪ звук: выкл';this.className='btn'+(st.sound?' on':'');};
+  $('mrd-reset').onclick=function(){reset();};
+  window.addEventListener('resize',resize);
+  resize();reset();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

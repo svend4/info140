@@ -1,0 +1,62 @@
+<svg width="100%" viewBox="0 0 680 360" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Таблица инфонов: классы C0–C5</title>
+<desc>Шесть классов инфонов в духе таблицы Менделеева, от ядра-энциклопедии C5 до квантов-букв C0, с уровнем, массой и примером.</desc>
+<style>
+text{font-family:'Anthropic Sans',system-ui,'Segoe UI',Roboto,sans-serif}
+.mt{font-size:14px;fill:#2C2C2A}.mts{font-size:12px;fill:#5F5E5A}.mth{font-size:14px;font-weight:500;fill:#2C2C2A}.mttl{font-size:16px;font-weight:500;fill:#2C2C2A}.msym{font-size:16px;font-weight:500}
+.box-purple{fill:#EEEDFE;stroke:#534AB7;stroke-width:1.5}.tx-purple{fill:#26215C}.txs-purple{fill:#3C3489}
+.box-teal{fill:#E1F5EE;stroke:#0F6E56;stroke-width:1.5}.tx-teal{fill:#04342C}.txs-teal{fill:#085041}
+.box-coral{fill:#FAECE7;stroke:#993C1D;stroke-width:1.5}.tx-coral{fill:#4A1B0C}.txs-coral{fill:#712B13}
+.box-blue{fill:#E6F1FB;stroke:#185FA5;stroke-width:1.5}.tx-blue{fill:#042C53}.txs-blue{fill:#0C447C}
+.box-amber{fill:#FAEEDA;stroke:#854F0B;stroke-width:1.5}.tx-amber{fill:#412402}.txs-amber{fill:#633806}
+.box-green{fill:#EAF3DE;stroke:#3B6D11;stroke-width:1.5}.tx-green{fill:#173404}.txs-green{fill:#27500A}
+@media (prefers-color-scheme:dark){
+.mt{fill:#E8E8EA}.mts{fill:#B4B2A9}.mth{fill:#E8E8EA}.mttl{fill:#F1EFE8}
+.box-purple{fill:#3C3489;stroke:#AFA9EC}.tx-purple{fill:#CECBF6}.txs-purple{fill:#AFA9EC}
+.box-teal{fill:#085041;stroke:#5DCAA5}.tx-teal{fill:#9FE1CB}.txs-teal{fill:#5DCAA5}
+.box-coral{fill:#712B13;stroke:#F0997B}.tx-coral{fill:#F5C4B3}.txs-coral{fill:#F0997B}
+.box-blue{fill:#0C447C;stroke:#85B7EB}.tx-blue{fill:#B5D4F4}.txs-blue{fill:#85B7EB}
+.box-amber{fill:#633806;stroke:#EF9F27}.tx-amber{fill:#FAC775}.txs-amber{fill:#EF9F27}
+.box-green{fill:#27500A;stroke:#97C459}.tx-green{fill:#C0DD97}.txs-green{fill:#97C459}
+}
+</style>
+<text class="mttl" x="40" y="30">Таблица инфонов: классы C0–C5</text>
+<text class="mts" x="40" y="52">к C5 — обобщение (масса растёт); к C0 — дробление; масса сохраняется в реакциях</text>
+<rect class="box-purple" x="40" y="78" width="186" height="110" rx="10"/>
+<text class="msym tx-purple" x="56" y="106">C5</text>
+<text class="mts txs-purple" x="210" y="104" text-anchor="end">n=0</text>
+<text class="mth tx-purple" x="56" y="138">ядро-энциклопедия</text>
+<text class="mts txs-purple" x="56" y="160">пример: «заголовок мира»</text>
+<text class="mts txs-purple" x="56" y="180">масса max · центр</text>
+<rect class="box-blue" x="247" y="78" width="186" height="110" rx="10"/>
+<text class="msym tx-blue" x="263" y="106">C4</text>
+<text class="mts txs-blue" x="417" y="104" text-anchor="end">n=1</text>
+<text class="mth tx-blue" x="263" y="138">порталы / подборки</text>
+<text class="mts txs-blue" x="263" y="160">пример: тема-портал</text>
+<text class="mts txs-blue" x="263" y="180">масса ↑ · разделы</text>
+<rect class="box-teal" x="454" y="78" width="186" height="110" rx="10"/>
+<text class="msym tx-teal" x="470" y="106">C3</text>
+<text class="mts txs-teal" x="624" y="104" text-anchor="end">n=2</text>
+<text class="mth tx-teal" x="470" y="138">статьи / темы</text>
+<text class="mts txs-teal" x="470" y="160">пример: статья</text>
+<text class="mts txs-teal" x="470" y="180">средняя масса</text>
+<rect class="box-green" x="40" y="208" width="186" height="110" rx="10"/>
+<text class="msym tx-green" x="56" y="236">C2</text>
+<text class="mts txs-green" x="210" y="234" text-anchor="end">n=3</text>
+<text class="mth tx-green" x="56" y="268">блоки / фразы</text>
+<text class="mts txs-green" x="56" y="290">пример: абзац</text>
+<text class="mts txs-green" x="56" y="310">масса ↓ · группы слов</text>
+<rect class="box-amber" x="247" y="208" width="186" height="110" rx="10"/>
+<text class="msym tx-amber" x="263" y="236">C1</text>
+<text class="mts txs-amber" x="417" y="234" text-anchor="end">n=4</text>
+<text class="mth tx-amber" x="263" y="268">слова</text>
+<text class="mts txs-amber" x="263" y="290">пример: слово</text>
+<text class="mts txs-amber" x="263" y="310">масса мала · знаки</text>
+<rect class="box-coral" x="454" y="208" width="186" height="110" rx="10"/>
+<text class="msym tx-coral" x="470" y="236">C0</text>
+<text class="mts txs-coral" x="624" y="234" text-anchor="end">n=5</text>
+<text class="mth tx-coral" x="470" y="268">кванты / буквы</text>
+<text class="mts txs-coral" x="470" y="290">пример: буква, бит</text>
+<text class="mts txs-coral" x="470" y="310">масса min · край</text>
+<text class="mts" x="40" y="345">слияние ▲ поднимает класс · дробление ▼ опускает (реакции — см. D7)</text>
+</svg>

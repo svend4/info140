@@ -1,0 +1,57 @@
+<svg width="100%" viewBox="0 0 680 425" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Концепт-карта системы MERIDIAN</title>
+<desc>Центральный рычаг смысла лямбда между полюсами дробления и обобщения и четыре подсистемы: инфоны, геометрия, логистика, варианты.</desc>
+<style>
+text{font-family:'Anthropic Sans',system-ui,'Segoe UI',Roboto,sans-serif}
+.mt{font-size:14px;fill:#2C2C2A}.mts{font-size:12px;fill:#5F5E5A}.mth{font-size:14px;font-weight:500;fill:#2C2C2A}.mttl{font-size:16px;font-weight:500;fill:#2C2C2A}
+.box-purple{fill:#EEEDFE;stroke:#534AB7;stroke-width:1.5}.tx-purple{fill:#26215C}.txs-purple{fill:#3C3489}
+.box-teal{fill:#E1F5EE;stroke:#0F6E56;stroke-width:1.5}.tx-teal{fill:#04342C}.txs-teal{fill:#085041}
+.box-coral{fill:#FAECE7;stroke:#993C1D;stroke-width:1.5}.tx-coral{fill:#4A1B0C}.txs-coral{fill:#712B13}
+.box-blue{fill:#E6F1FB;stroke:#185FA5;stroke-width:1.5}.tx-blue{fill:#042C53}.txs-blue{fill:#0C447C}
+.box-amber{fill:#FAEEDA;stroke:#854F0B;stroke-width:1.5}.tx-amber{fill:#412402}.txs-amber{fill:#633806}
+.box-gray{fill:#F1EFE8;stroke:#5F5E5A;stroke-width:1.5}.tx-gray{fill:#2C2C2A}.txs-gray{fill:#444441}
+.marr{stroke:#888780;stroke-width:1.5;fill:none}
+@media (prefers-color-scheme:dark){
+.mt{fill:#E8E8EA}.mts{fill:#B4B2A9}.mth{fill:#E8E8EA}.mttl{fill:#F1EFE8}
+.box-purple{fill:#3C3489;stroke:#AFA9EC}.tx-purple{fill:#CECBF6}.txs-purple{fill:#AFA9EC}
+.box-teal{fill:#085041;stroke:#5DCAA5}.tx-teal{fill:#9FE1CB}.txs-teal{fill:#5DCAA5}
+.box-coral{fill:#712B13;stroke:#F0997B}.tx-coral{fill:#F5C4B3}.txs-coral{fill:#F0997B}
+.box-blue{fill:#0C447C;stroke:#85B7EB}.tx-blue{fill:#B5D4F4}.txs-blue{fill:#85B7EB}
+.box-amber{fill:#633806;stroke:#EF9F27}.tx-amber{fill:#FAC775}.txs-amber{fill:#EF9F27}
+.box-gray{fill:#2C2C2A;stroke:#888780}.tx-gray{fill:#D3D1C7}.txs-gray{fill:#B4B2A9}
+.marr{stroke:#B4B2A9}
+}
+</style>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text class="mttl" x="40" y="30">Концепт-карта системы MERIDIAN</text>
+<text class="mts" x="40" y="50">рычаг смысла между двумя губительными полюсами; четыре подсистемы</text>
+<line class="marr" x1="190" y1="150" x2="270" y2="150"/>
+<line class="marr" x1="410" y1="150" x2="490" y2="150"/>
+<polygon points="340,182 330,205 350,205" fill="#888780"/>
+<rect class="box-amber" x="40" y="120" width="150" height="60" rx="8"/>
+<text class="mth tx-amber" x="115" y="146" text-anchor="middle">Дробление</text>
+<text class="mts txs-amber" x="115" y="166" text-anchor="middle">λ→0 · шум, пыль</text>
+<rect class="box-purple" x="270" y="120" width="140" height="60" rx="8"/>
+<text class="mth tx-purple" x="340" y="146" text-anchor="middle">Рычаг смысла</text>
+<text class="mts txs-purple" x="340" y="166" text-anchor="middle">λ ∈ (0,1)</text>
+<rect class="box-blue" x="490" y="120" width="150" height="60" rx="8"/>
+<text class="mth tx-blue" x="565" y="146" text-anchor="middle">Обобщение</text>
+<text class="mts txs-blue" x="565" y="166" text-anchor="middle">λ→1 · одно ядро</text>
+<line class="marr" x1="340" y1="180" x2="109" y2="298" marker-end="url(#arrow)"/>
+<line class="marr" x1="340" y1="180" x2="263" y2="298" marker-end="url(#arrow)"/>
+<line class="marr" x1="340" y1="180" x2="417" y2="298" marker-end="url(#arrow)"/>
+<line class="marr" x1="340" y1="180" x2="571" y2="298" marker-end="url(#arrow)"/>
+<rect class="box-teal" x="40" y="300" width="138" height="70" rx="8"/>
+<text class="mth tx-teal" x="109" y="332" text-anchor="middle">Инфоны</text>
+<text class="mts txs-teal" x="109" y="352" text-anchor="middle">частицы-со-смыслом</text>
+<rect class="box-teal" x="194" y="300" width="138" height="70" rx="8"/>
+<text class="mth tx-teal" x="263" y="332" text-anchor="middle">Геометрия</text>
+<text class="mts txs-teal" x="263" y="352" text-anchor="middle">орбиты·цветок·метро</text>
+<rect class="box-coral" x="348" y="300" width="138" height="70" rx="8"/>
+<text class="mth tx-coral" x="417" y="332" text-anchor="middle">Логистика</text>
+<text class="mts txs-coral" x="417" y="352" text-anchor="middle">конвейер · очереди</text>
+<rect class="box-gray" x="502" y="300" width="138" height="70" rx="8"/>
+<text class="mth tx-gray" x="571" y="332" text-anchor="middle">Варианты</text>
+<text class="mts txs-gray" x="571" y="352" text-anchor="middle">1 флагман + 3</text>
+<text class="mts" x="40" y="400">подсистемы детально — в документах 02–05</text>
+</svg>

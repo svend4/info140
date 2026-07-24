@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Оконный странник (мантра-петля, окна кунг-фу)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:380px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.mantra{font-size:16px;font-weight:600;line-height:1.6}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Оконный странник</div>
+<div class="sub">алгоритм окон из «Тотальной системы боя» (гл. 9) × ритм мантры: петля слов крутится, K повторов держат окна ЗАКРЫТЫМИ (феромон крепнет — «нагруженное возвращение»), затем окно ОТКРЫВАЕТСЯ и впускает одно новое слово; полная петля переходит к окнам-заменам (как Кришна→Рама)</div>
+<canvas id="mrd-c"></canvas>
+<div class="hud"><span>повтор <b id="mrd-rep">0</b>/<b id="mrd-k2">3</b></span><span>оборотов всего <b id="mrd-tot">0</b></span><span>впущено слов <b id="mrd-in">0</b></span><span>замен <b id="mrd-sw">0</b></span><span>вердикт: <b id="mrd-verd">—</b></span></div>
+<div class="panel"><h3>📿 Текущая мантра-петля</h3><div class="mantra" id="mrd-m">—</div></div>
+<div class="panel"><h3>Журнал окон (закрыто · открыто · впущено · блок)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ петля крутится</button><button class="btn" id="mrd-reset">↻ новое семя</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="8" step="1" value="4"></label></div>
+<div class="row"><span style="color:var(--text-secondary)">K — повторов до окна:</span>
+<input id="mrd-k" type="range" min="0" max="6" step="1" value="3" style="flex:1"><b id="mrd-kv">3</b></div>
+<div class="note">K=0 → каждый шаг новое слово = распад (шум). K=6 → мантра без окон = колея (застой). K=2–3 — живой ритм: повторы программируют ожидание (как блоки-провокации Винь-Чунь), окно впускает новое слово в самую заметную позицию. Не прижилось (связь ниже порога) → «блок»: откат, петля цела. Рёбра петли крепнут при повторе и тают без него. Файл: prototype/p64-window-walker.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var POOL=[['город','г'],['улица','гд'],['мост','гд'],['путь','дм'],['поток','дп'],['поезд','гд'],['свет','с'],['заря','сп'],['луч','см'],['слово','м'],['мысль','мв'],['идея','м'],['время','в'],['тишина','вм'],['река','пд'],['сад','пг'],['смысл','м'],['вечность','в']].map(function(a){return {w:a[0],tg:a[1].split('')};});
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+var loop=[],edgeS=[],pos=0,tw=0,rep=0,tot=0,K=3,letIn=0,swaps=0,run=true,spd=4,last=0,logL=[],windowOpen=false,cand=null,flash=0;
+function reset(){var i=Math.floor(Math.random()*POOL.length);var best=-1,bj=-1;
+ for(var j=0;j<POOL.length;j++){if(j===i)continue;var c=cos(POOL[i].tg,POOL[j].tg);if(c>best){best=c;bj=j;}}
+ loop=[i,bj];edgeS=[1,1];pos=0;tw=0;rep=0;tot=0;letIn=0;swaps=0;logL=[];windowOpen=false;cand=null;
+ addLog('семя петли: «'+POOL[i].w+' → '+POOL[bj].w+'» (связь '+best.toFixed(2)+')');}
+function addLog(s){logL.unshift(s);if(logL.length>5)logL.pop();}
+function avgCoh(idxs){if(idxs.length<2)return 1;var s=0;for(var i=0;i<idxs.length;i++)s+=cos(POOL[idxs[i]].tg,POOL[idxs[(i+1)%idxs.length]].tg);return s/idxs.length;}
+function candScore(j){var s=0;for(var i=0;i<loop.length;i++)s+=cos(POOL[j].tg,POOL[loop[i]].tg);return s/loop.length;}
+function pickCand(){var best=null,bs=-1;
+ for(var j=0;j<POOL.length;j++){if(loop.indexOf(j)>=0)continue;var s=candScore(j)+Math.random()*0.1;if(s>bs){bs=s;best=j;}}
+ return best!=null?{j:best,s:candScore(best)}:null;}
+function weakest(){var wi=0,ws=1e9;for(var i=0;i<loop.length;i++){var a=POOL[loop[i]],p=POOL[loop[(i-1+loop.length)%loop.length]],n=POOL[loop[(i+1)%loop.length]];
+ var s=(cos(a.tg,p.tg)+cos(a.tg,n.tg))/2;if(s<ws){ws=s;wi=i;}}return {i:wi,s:ws};}
+function step(){pos=(pos+1)%loop.length;
+ // нагруженное возвращение: усиление пройденного ребра
+ edgeS[(pos-1+loop.length)%loop.length]=Math.min(8,(edgeS[(pos-1+loop.length)%loop.length]||1)+0.5);
+ FX.blip(360+pos*40,0.025);
+ if(pos===0){tot++;rep++;
+  if(rep>=K){ // ОКНО ОТКРЫВАЕТСЯ
+   windowOpen=true;flash=1;cand=pickCand();rep=0;
+   if(!cand){addLog('окно: кандидатов нет');windowOpen=false;return;}
+   if(cand.s>=0.25){
+    if(loop.length<7){ // впуск-рост
+     loop.push(cand.j);edgeS.push(1);letIn++;
+     addLog('🪟 <b>ОКНО ОТКРЫТО</b> → впущено «<b>'+POOL[cand.j].w+'</b>» (связь '+cand.s.toFixed(2)+') — петля выросла до '+loop.length);
+     FX.chord([523,659,784],0.06);}
+    else { // окно-замена (Кришна→Рама)
+     var wk=weakest();var old=POOL[loop[wk.i]].w;loop[wk.i]=cand.j;edgeS[wk.i]=1;swaps++;
+     addLog('🔄 <b>ОКНО-ЗАМЕНА</b>: «'+old+'» → «<b>'+POOL[cand.j].w+'</b>» (слабейшее звено '+wk.s.toFixed(2)+' → '+cand.s.toFixed(2)+')');
+     FX.chord([440,587],0.06);}
+    windowOpen=false;}
+   else {addLog('🛡 <b>блок</b>: «'+POOL[cand.j].w+'» не прижилось (связь '+cand.s.toFixed(2)+' < 0.25) — петля цела');windowOpen=false;FX.blip(180,0.05,'sawtooth');}}
+  else addLog('повтор '+rep+'/'+K+' — окна закрыты, рёбра крепнут (нагруженное возвращение)');}
+ // испарение
+ for(var i=0;i<edgeS.length;i++)edgeS[i]=Math.max(0.3,edgeS[i]*0.985);}
+function verdict(){if(K===0)return ['распад: каждый шаг новое, ритма нет (шум)','#D85A30'];
+ if(K>=5)return ['колея: мантра почти без окон (застой)','#7F77DD'];
+ return ['живой ритм: повторы держат, окна впускают','#1D9E75'];}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||380;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-52;
+ var n=loop.length;
+ function X(i){return cx+Math.cos(-Math.PI/2+i/n*Math.PI*2)*R;}
+ function Y(i){return cy+Math.sin(-Math.PI/2+i/n*Math.PI*2)*R;}
+ // рёбра петли (прочность)
+ for(var i=0;i<n;i++){var j=(i+1)%n;
+  ctx.strokeStyle='#EF9F27';ctx.globalAlpha=Math.min(0.9,0.15+edgeS[i]*0.1);ctx.lineWidth=Math.min(7,0.8+edgeS[i]*0.7);
+  ctx.beginPath();ctx.moveTo(X(i),Y(i));ctx.lineTo(X(j),Y(j));ctx.stroke();}
+ ctx.globalAlpha=1;
+ // окно (между последним и первым)
+ if(flash>0){ctx.strokeStyle='#1D9E75';ctx.globalAlpha=flash;ctx.lineWidth=3;ctx.setLineDash([6,5]);
+  ctx.beginPath();ctx.arc((X(n-1)+X(0))/2,(Y(n-1)+Y(0))/2,26,0,6.283);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.fillStyle='#1D9E75';ctx.font='600 11px system-ui';ctx.textAlign='center';ctx.fillText('🪟 окно',(X(n-1)+X(0))/2,(Y(n-1)+Y(0))/2-32);}
+ // слова петли
+ for(i=0;i<n;i++){var p=POOL[loop[i]];var x=X(i),y=Y(i);var on=(i===pos);
+  ctx.beginPath();ctx.arc(x,y,on?13:10,0,6.283);ctx.fillStyle=THC[p.tg[0]]||'#888780';ctx.fill();
+  if(on){ctx.strokeStyle=uic;ctx.lineWidth=2;ctx.stroke();}
+  ctx.fillStyle=uic;ctx.font=(on?'600 13px':'12px')+' system-ui';ctx.textAlign='center';
+  var ly=y+(Math.sin(-Math.PI/2+i/n*Math.PI*2)>0.3?26:-18);ctx.fillText(p.w,x,ly);}
+ // странник между узлами
+ var a=pos,b=(pos+1)%n;var t=tw;t=t*t*(3-2*t);
+ var sx=X(a)+(X(b)-X(a))*t,sy=Y(a)+(Y(b)-Y(a))*t;
+ ctx.beginPath();ctx.arc(sx,sy,6,0,6.283);ctx.fillStyle='#1D9E75';ctx.fill();
+ // счётчик повторов в центре
+ ctx.fillStyle=uic;ctx.font='600 22px system-ui';ctx.textAlign='center';ctx.fillText(rep+'/'+K,cx,cy+2);
+ ctx.font='10px system-ui';ctx.fillStyle=d?'#888780':'#9A9A93';ctx.fillText('повторы до окна',cx,cy+18);
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText('толщина ребра = прочность (повторы крепят)',10,16);ctx.textAlign='start';}
+function render(){draw();var v=verdict();
+ document.getElementById('mrd-rep').textContent=rep;document.getElementById('mrd-k2').textContent=K;
+ document.getElementById('mrd-tot').textContent=tot;document.getElementById('mrd-in').textContent=letIn;
+ document.getElementById('mrd-sw').textContent=swaps;
+ var e=document.getElementById('mrd-verd');if(e)e.innerHTML='<span style="color:'+v[1]+'">'+v[0]+'</span>';
+ e=document.getElementById('mrd-m');if(e){var h='';for(var i=0;i<loop.length;i++){var p=POOL[loop[i]];
+  h+='<span style="color:'+(THC[p.tg[0]]||'#888780')+'">'+p.w+'</span>'+(i<loop.length-1?' · ':' ⟳');}e.innerHTML=h;}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop2(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var coh=avgCoh(loop);FX.ambient(0.014+0.01*coh);
+ if(flash>0)flash-=dt*0.8;
+ if(run){tw+=dt*(0.8+spd*0.35);if(tw>=1){tw=0;step();}}
+ render();requestAnimationFrame(loop2);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ петля крутится':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-k').oninput=function(){K=parseInt(this.value,10);$('mrd-kv').textContent=K;};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop2);
+})();
+</script></body></html>

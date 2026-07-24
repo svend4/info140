@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN: Каскад-защита</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:440px;border:1px solid var(--border);border-radius:12px;touch-action:none}
+.lam{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text-secondary)}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 13px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}.btn.sel{border-color:#EF9F27;color:#EF9F27;font-weight:600}
+.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN: Каскад-защита</div>
+<div class="sub">инфоны летят с краёв к СТОКУ в центре. Ставь реакторы кликом: ▲ катализатор повышает класс, ▼ ингибитор понижает. Доводи их до целевого класса, гаси шум C0.</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam"><span>дробление</span><input id="mrd-lam" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span>обобщение</span><span style="min-width:54px">λ=<b id="mrd-lamv" style="color:var(--text-primary)">0.50</b></span></div>
+<div class="row">
+<button class="btn sel" id="mrd-cat">▲ катализатор</button>
+<button class="btn" id="mrd-inh">▼ ингибитор</button>
+<button class="btn on" id="mrd-sound">♪ звук</button>
+<button class="btn" id="mrd-reset">↻ заново</button></div>
+<div class="row">
+<span class="stat">цель: <b id="mrd-tgt">—</b></span>
+<span class="stat">очки: <b id="mrd-score">0</b></span>
+<span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat">жизни: <b id="mrd-lives">3</b></span></div>
+<div class="note">λ задаёт глобальный уклон реакций: ниже 0.5 — реакторы охотнее дробят (понижают), выше — обобщают (повышают). Цель меняется. Файл: prototype/p28-cascade-defense.html</div>
+</div>
+<script src="lib/mrd-fx.js"></script>
+<script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var cvs=document.getElementById('mrd-canvas');if(!cvs)return;var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var W=0,H=0,cx=0,cy=0,SINK=30;
+var lam=0.5,last=0,P=[],R=[],fl=[],spawnT=0,spawnGap=1.3,score=0,best=0,lives=3,over=false,won=false;
+var tgt=3,tgtT=0,sound=true,tool=1; // tool: 1=catalyst, -1=inhibitor
+best=FX.best('meridian_casdef_best');
+
+function rz(){var r=cvs.getBoundingClientRect(),dpr=window.devicePixelRatio||1;W=r.width||560;H=r.height||440;
+ cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;}
+
+function mk(){var ang=Math.random()*TAU,rad=Math.max(W,H)*0.55+40;
+ // ~25% шум C0, остальное C1..C4
+ var c=Math.random()<0.25?0:1+((Math.random()*4)|0);
+ return {x:cx+Math.cos(ang)*rad,y:cy+Math.sin(ang)*rad,cls:c,
+  a:ang,rad:rad,sp:26+Math.random()*16,cd:0,pulse:0};}
+
+function newTgt(){var n;do{n=2+((Math.random()*3)|0);}while(n===tgt);tgt=n;tgtT=0;}
+function reset(){P=[];R=[];fl=[];spawnT=0;spawnGap=1.3;score=0;lives=3;over=false;won=false;tgt=3;newTgt();}
+
+function flash(x,y,tx,c){fl.push({x:x,y:y,tx:tx,c:c,t:0.95});}
+
+function place(px,py){if(over)return;
+ // нельзя ставить прямо в сток
+ var dx=px-cx,dy=py-cy;if(dx*dx+dy*dy<(SINK+14)*(SINK+14))return;
+ R.push({x:px,y:py,t:tool,life:5.0,cool:0});
+ FX.blip(tool>0?300:200,0.05,'sine');flash(px,py-18,tool>0?'▲':'▼',tool>0?'#EF9F27':'#378ADD');}
+
+function applyReactor(r,o){
+ // глобальный уклон от λ: bias>0 склоняет к повышению, <0 к понижению
+ var bias=(lam-0.5)*2; // -1..1
+ var eff=r.t+bias*0.5; // итоговая склонность реактора
+ if(r.t>0){ // катализатор: повышает класс, особенно при высоком λ
+   var p=0.55+0.4*Math.max(0,bias);
+   if(o.cls<5&&Math.random()<p*0.5+0.25){o.cls++;o.pulse=1;flash(o.x,o.y-14,'+','#1D9E75');FX.blip(520,0.04);}
+ } else { // ингибитор: понижает класс, особенно при низком λ
+   var pl=0.55+0.4*Math.max(0,-bias);
+   if(o.cls>0&&Math.random()<pl*0.5+0.25){o.cls--;o.pulse=1;flash(o.x,o.y-14,'−','#378ADD');FX.blip(330,0.04);}
+ }
+ r.cool=0.45;
+}
+
+function deliver(o){
+ if(o.cls===tgt){score+=10;flash(cx,cy-SINK-10,'+10','#1D9E75');FX.chord([523,659,784],0.05);}
+ else if(o.cls===0){lives--;flash(cx,cy-SINK-10,'шум!','#D85A30');FX.blip(140,0.07,'sawtooth');
+   if(lives<=0){over=true;won=false;best=FX.best('meridian_casdef_best',score);}}
+ else{score=Math.max(0,score-3);flash(cx,cy-SINK-10,'C'+o.cls,'#D85A30');FX.blip(220,0.04);}
+}
+
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;var M=4*lam*(1-lam);
+ if(!over){
+  tgtT+=dt;if(tgtT>=12)newTgt();
+  spawnT+=dt;if(spawnT>=spawnGap){spawnT=0;spawnGap=Math.max(0.55,spawnGap-0.012);P.push(mk());}
+  // движение инфонов к стоку
+  for(var i=P.length-1;i>=0;i--){var o=P[i];
+   var dx=cx-o.x,dy=cy-o.y,d=Math.hypot(dx,dy)||1;
+   o.x+=dx/d*o.sp*dt;o.y+=dy/d*o.sp*dt;if(o.cd>0)o.cd-=dt;if(o.pulse>0)o.pulse-=dt*2;
+   // реакторы
+   for(var j=0;j<R.length;j++){var r=R[j];if(r.cool>0)continue;
+    var rx=o.x-r.x,ry=o.y-r.y;if(rx*rx+ry*ry<26*26&&o.cd<=0){applyReactor(r,o);o.cd=0.5;r.life-=0.9;}}
+   // достиг стока
+   if(d<SINK+8){deliver(o);P.splice(i,1);}
+  }
+  // износ реакторов
+  for(var k=R.length-1;k>=0;k--){R[k].life-=dt;if(R[k].cool>0)R[k].cool-=dt;if(R[k].life<=0)R.splice(k,1);}
+  // победа по очкам
+  if(score>=200){over=true;won=true;best=FX.best('meridian_casdef_best',score);}
+ }
+ FX.ambient(0.03*M);
+ for(i=fl.length-1;i>=0;i--){fl[i].t-=dt;fl[i].y-=14*dt;if(fl[i].t<=0)fl.splice(i,1);}
+ draw();hud();requestAnimationFrame(loop);}
+
+function draw(){ctx.clearRect(0,0,W,H);
+ // сток в центре (обведён цветом цели)
+ ctx.fillStyle='rgba(127,119,221,0.10)';ctx.beginPath();ctx.arc(cx,cy,SINK,0,TAU);ctx.fill();
+ ctx.strokeStyle=colOf(tgt);ctx.lineWidth=3;ctx.setLineDash([6,5]);ctx.beginPath();ctx.arc(cx,cy,SINK,0,TAU);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle=colOf(tgt);ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('C'+tgt,cx,cy);
+ ctx.textBaseline='alphabetic';ctx.textAlign='start';
+ // реакторы
+ for(var j=0;j<R.length;j++){var r=R[j],a=Math.min(1,r.life/5);
+  ctx.globalAlpha=0.25*a;ctx.fillStyle=r.t>0?'#EF9F27':'#378ADD';ctx.beginPath();ctx.arc(r.x,r.y,26,0,TAU);ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle=r.t>0?'#EF9F27':'#378ADD';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(r.t>0?'▲':'▼',r.x,r.y);ctx.textBaseline='alphabetic';ctx.textAlign='start';}
+ // инфоны
+ for(var i=0;i<P.length;i++){var o=P[i],rr=8+o.pulse*4;ctx.fillStyle=colOf(o.cls);
+  ctx.beginPath();ctx.arc(o.x,o.y,rr,0,TAU);ctx.fill();
+  if(o.cls===0){ctx.strokeStyle='#D85A30';ctx.lineWidth=2;ctx.beginPath();ctx.arc(o.x,o.y,rr+3,0,TAU);ctx.stroke();}
+  if(o.cls===tgt){ctx.strokeStyle='#1D9E75';ctx.lineWidth=2;ctx.beginPath();ctx.arc(o.x,o.y,rr+4,0,TAU);ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=2;ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  var lab=o.cls===0?'·':String(o.cls);ctx.strokeText(lab,o.x,o.y);ctx.fillText(lab,o.x,o.y);ctx.textBaseline='alphabetic';ctx.textAlign='start';}
+ // всплывашки
+ for(i=0;i<fl.length;i++){var f=fl[i];ctx.fillStyle=f.c;ctx.globalAlpha=Math.min(1,f.t*1.3);ctx.font='600 14px system-ui';ctx.textAlign='center';ctx.fillText(f.tx,f.x,f.y);ctx.globalAlpha=1;ctx.textAlign='start';}
+ if(over){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 21px system-ui';
+  ctx.fillText(won?'Стабилизировано! '+score:'Перегрузка стока · '+score,cx,cy-4);
+  ctx.font='13px system-ui';ctx.fillText('рекорд '+Math.round(best)+' · нажми «заново»',cx,cy+22);ctx.textAlign='start';}}
+
+function hud(){var e;
+ e=document.getElementById('mrd-lamv');if(e)e.textContent=lam.toFixed(2);
+ e=document.getElementById('mrd-tgt');if(e){e.textContent='C'+tgt;e.style.color=colOf(tgt);}
+ e=document.getElementById('mrd-score');if(e)e.textContent=score;
+ e=document.getElementById('mrd-best');if(e)e.textContent=Math.round(best);
+ e=document.getElementById('mrd-lives');if(e)e.textContent=Math.max(0,lives);}
+
+function at(e){var r=cvs.getBoundingClientRect();var t=e.touches&&e.touches[0];return {x:(t?t.clientX:e.clientX)-r.left,y:(t?t.clientY:e.clientY)-r.top};}
+cvs.addEventListener('mousedown',function(e){var p=at(e);place(p.x,p.y);});
+cvs.addEventListener('touchstart',function(e){e.preventDefault();var p=at(e);place(p.x,p.y);},{passive:false});
+var bc=document.getElementById('mrd-cat'),bi=document.getElementById('mrd-inh');
+bc.onclick=function(){tool=1;bc.className='btn sel';bi.className='btn';};
+bi.onclick=function(){tool=-1;bi.className='btn sel';bc.className='btn';};
+document.getElementById('mrd-sound').onclick=function(){sound=FX.toggle();this.className='btn'+(sound?' on':'');};
+FX.toggle();sound=true; // включить звук по умолчанию (требует жеста — реактивируется при клике)
+document.getElementById('mrd-reset').onclick=reset;
+var sl=document.getElementById('mrd-lam');sl.oninput=function(){lam=parseFloat(sl.value);};
+window.addEventListener('resize',rz);rz();reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

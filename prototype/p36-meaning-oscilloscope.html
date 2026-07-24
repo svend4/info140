@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Осциллограф смысла (фазовый портрет)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+canvas{display:block;width:100%;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+#osc{height:120px}#phase{height:280px;margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:120px}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:230px}.bar>i{display:block;height:100%;background:#1D9E75}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:10px;font-size:12px}
+.ctl label{display:flex;flex-direction:column;gap:2px;color:var(--text-secondary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.preset{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:7px;padding:5px 10px;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}.seg button{border:0;background:var(--surface-2);color:var(--text-secondary);padding:6px 10px;font-size:12px;cursor:pointer}.seg button.on{background:#1D9E75;color:#fff}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Осциллограф смысла</div>
+<div class="sub">смысл как динамическая система. Сверху — развёртка λ(t); снизу — фазовый портрет (отклонение × скорость). Жизнь = устойчивое колебание (петля); коллапс/шум = сток в полюс или биение о края</div>
+<canvas id="osc"></canvas>
+<canvas id="phase"></canvas>
+<div class="panel"><h3>Показания</h3><div id="mrd-read">—</div></div>
+<div class="row">
+<span style="color:var(--text-secondary)">режимы:</span>
+<button class="preset" data-p="life">живой режим</button>
+<button class="preset" data-p="collapse">коллапс</button>
+<button class="preset" data-p="noise">шум</button>
+<button class="preset" data-p="stall">застой</button></div>
+<div class="ctl">
+<label>восстановление к центру k <input id="mrd-k" type="range" min="0" max="6" step="0.1" value="2.5"></label>
+<label>демпфирование (застой) c <input id="mrd-c" type="range" min="0" max="3" step="0.05" value="0.15"></label>
+<label>наклон к полюсу bias <input id="mrd-bias" type="range" min="-0.5" max="0.5" step="0.02" value="0"></label>
+<label>энергия движения <input id="mrd-drive" type="range" min="0" max="0.7" step="0.02" value="0.25"></label></div>
+<div class="row"><span style="color:var(--text-secondary)">источник энергии:</span><div class="seg" id="mrd-dt"><button data-d="sin" class="on">ритм (синус)</button><button data-d="noise">шум</button><button data-d="none">нет</button></div>
+<button class="btn on" id="mrd-run">▶</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="note">k тянет λ к живому центру; c гасит движение (большое c → застой); bias постоянно сваливает к одному полюсу (коллапс λ→1 или шум λ→0); энергия питает колебание. Идея гуманитарной формулы (docs/12): благо = непрерывное ограниченное движение (петля в фазовом портрете), а не неподвижная точка (оба конца). Файл: prototype/p36-meaning-oscilloscope.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var x=0,v=0,t=0,run=true,P={k:2.5,c:0.15,bias:0,drive:0.25,dt:'sin'};
+var hist=[],trail=[],bx=[],bv=[],clip=[];var MAXH=400,MAXT=260,WIN=90;
+function step(dt){var F=P.dt==='sin'?P.drive*Math.sin(t*1.6):P.dt==='noise'?P.drive*(Math.random()*2-1):0;t+=dt;
+ var sub=4,h=dt/sub;for(var i=0;i<sub;i++){var a=-P.k*x-P.c*v+P.bias+F;v+=a*h;x+=v*h;var c=0;if(x>0.5){x=0.5;v*=-0.3;c=1;}if(x<-0.5){x=-0.5;v*=-0.3;c=1;}}
+ var lam=Math.max(0,Math.min(1,0.5+x));hist.push(lam);if(hist.length>MAXH)hist.shift();
+ trail.push({x:x,v:v});if(trail.length>MAXT)trail.shift();
+ bx.push(x);bv.push(Math.abs(v));clip.push((x>=0.5||x<=-0.5)?1:0);if(bx.length>WIN){bx.shift();bv.shift();clip.shift();}}
+function stat(){var n=bx.length||1;var mn=1,mx=-1,sx=0,sv=0,sc=0;for(var i=0;i<bx.length;i++){if(bx[i]<mn)mn=bx[i];if(bx[i]>mx)mx=bx[i];sx+=bx[i];sv+=bv[i];sc+=clip[i];}
+ return {amp:mx-mn,meanx:sx/n,spd:sv/n,clipr:sc/n};}
+function classify(s){if(s.clipr>0.3)return s.meanx>0?['коллапс: бьётся о полюс λ→1','#7F77DD']:['шум: бьётся о полюс λ→0','#D85A30'];
+ if(s.amp<0.05&&s.spd<0.05){if(s.meanx>0.3)return ['коллапс: застрял у обобщения','#7F77DD'];if(s.meanx<-0.3)return ['шум: застрял у дробления','#D85A30'];return ['застой: движение затухло','#EF9F27'];}
+ if(s.meanx>0.32)return ['сваливание к обобщению','#7F77DD'];if(s.meanx<-0.32)return ['сваливание к дроблению','#D85A30'];
+ return ['живой колебательный режим','#1D9E75'];}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function osc(){var c=document.getElementById('osc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||120;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var lo=0.35,hi=0.65;
+ function Y(l){return H-6-l*(H-12);}
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.12;ctx.fillRect(0,Y(hi),W,Y(lo)-Y(hi));ctx.globalAlpha=1;
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.10;ctx.fillRect(0,Y(0.12),W,H-Y(0.12));ctx.fillStyle='#7F77DD';ctx.fillRect(0,0,W,Y(0.88));ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,Y(0.5));ctx.lineTo(W,Y(0.5));ctx.stroke();
+ ctx.strokeStyle='#1D9E75';ctx.lineWidth=2;ctx.beginPath();var st=Math.max(0,hist.length-W);for(var i=st;i<hist.length;i++){var px=W-(hist.length-i);var py=Y(hist[i]);if(i===st)ctx.moveTo(px,py);else ctx.lineTo(px,py);}ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('λ(t) · верх=обобщение, низ=дробление',8,14);ctx.textAlign='start';}
+function phase(){var c=document.getElementById('phase');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||280;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,sx=(W-60)/1.0,sv=(H-50)/3.0;
+ function X(xx){return cx+xx*sx;}function Yv(vv){return cy-vv*sv;}
+ // живая зона (центр)
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.10;ctx.fillRect(X(-0.15),0,X(0.15)-X(-0.15),H);ctx.globalAlpha=1;
+ // полюса
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.10;ctx.fillRect(0,0,X(-0.42),H);ctx.fillStyle='#7F77DD';ctx.fillRect(X(0.42),0,W-X(0.42),H);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+ // трасса
+ for(var i=1;i<trail.length;i++){var a=i/trail.length;ctx.strokeStyle='rgba(29,158,117,'+(0.15+0.85*a)+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(trail[i-1].x),Yv(trail[i-1].v));ctx.lineTo(X(trail[i].x),Yv(trail[i].v));ctx.stroke();}
+ if(trail.length){var p=trail[trail.length-1];ctx.fillStyle=(Math.abs(p.x)>=0.49)?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(X(p.x),Yv(p.v),6,0,6.283);ctx.fill();}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('фазовый портрет: → отклонение λ, ↑ скорость движения',8,16);
+ ctx.textAlign='center';ctx.fillStyle='#D85A30';ctx.fillText('дробление',X(-0.46),H-8);ctx.fillStyle='#7F77DD';ctx.fillText('обобщение',X(0.46),H-8);ctx.fillStyle='#1D9E75';ctx.fillText('жизнь = петля здесь',cx,H-8);ctx.textAlign='start';}
+function read(){var s=stat();var cl=classify(s);var lam=0.5+x;var M=4*lam*(1-lam);
+ function brow(l,val,col){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,val))*100)+'%;background:'+(col||'#1D9E75')+'"></i></span><span style="color:var(--text-muted)">'+val.toFixed(2)+'</span></div>';}
+ var e=document.getElementById('mrd-read');if(e)e.innerHTML=brow('λ',lam)+brow('M(λ)',M)+brow('движение Φ̇ (скорость)',Math.min(1,s.spd*3))+'<div style="margin-top:4px">состояние: <b style="color:'+cl[1]+'">'+cl[0]+'</b></div>';}
+function loop(ts){if(run)step(1/60);var lam=0.5+x,M=4*lam*(1-lam);FX.ambient(0.02*M);FX.freq(110+lam*150);osc();phase();read();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+function sync(){$('mrd-k').value=P.k;$('mrd-c').value=P.c;$('mrd-bias').value=P.bias;$('mrd-drive').value=P.drive;var dd=$('mrd-dt').children;for(var i=0;i<dd.length;i++)dd[i].className=(dd[i].getAttribute('data-d')===P.dt)?'on':'';}
+$('mrd-k').oninput=function(){P.k=+this.value;};$('mrd-c').oninput=function(){P.c=+this.value;};$('mrd-bias').oninput=function(){P.bias=+this.value;};$('mrd-drive').oninput=function(){P.drive=+this.value;};
+var dd=$('mrd-dt').children;for(var i=0;i<dd.length;i++)dd[i].onclick=function(){P.dt=this.getAttribute('data-d');sync();};
+var PRE={life:{k:2.5,c:0.12,bias:0,drive:0.28,dt:'sin'},collapse:{k:1.2,c:0.5,bias:0.35,drive:0.05,dt:'none'},noise:{k:0.6,c:0.05,bias:-0.1,drive:0.65,dt:'noise'},stall:{k:3,c:2.2,bias:0,drive:0.02,dt:'none'}};
+var pp=document.querySelectorAll('.preset');for(i=0;i<pp.length;i++)pp[i].onclick=function(){var o=PRE[this.getAttribute('data-p')];P.k=o.k;P.c=o.c;P.bias=o.bias;P.drive=o.drive;P.dt=o.dt;x=0;v=0.2;trail=[];bx=[];bv=[];clip=[];sync();FX.blip(500,0.04);};
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){x=0;v=0.2;t=0;hist=[];trail=[];bx=[];bv=[];clip=[];};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',function(){osc();phase();});sync();v=0.2;requestAnimationFrame(loop);
+})();
+</script></body></html>

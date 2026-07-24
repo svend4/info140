@@ -1,0 +1,21 @@
+# Local editor and agent settings
+.claude/
+
+# Generated and temporary files
+*.orig
+*.rej
+*.bak
+*.tmp
+*.log
+.p78-*.patch
+
+# Runtime and tool caches
+node_modules/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

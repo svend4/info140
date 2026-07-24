@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Приборная доска смысла</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-panel{display:block;width:100%;height:300px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.strip{display:flex;gap:6px;margin-top:10px}
+.cell{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:7px 4px;text-align:center;font-size:12px;color:var(--text-secondary);background:var(--surface-2)}
+.cell.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1);font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.lamp{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.nav h3{font-size:12px;color:var(--text-secondary);font-weight:500;margin:12px 0 4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.grid a{display:block;border:1px solid var(--border);border-radius:8px;padding:7px 9px;font-size:12px;text-decoration:none;color:var(--text-primary);background:var(--surface-1)}
+.grid a:hover{border-color:#1D9E75}.grid a small{color:var(--text-muted)}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Приборная доска смысла</div>
+<div class="sub">единый пульт: один рычаг λ синхронно двигает все приборы. Крути рычаг или включи свип — смотри, как каждый показатель реагирует на дробление, живую зону и коллапс</div>
+<canvas id="mrd-panel"></canvas>
+<div class="strip" id="mrd-strip"></div>
+<div class="row"><span style="color:var(--text-secondary)">рычаг λ:</span><span>дробление</span>
+<input id="mrd-l" type="range" min="0.02" max="0.98" step="0.01" value="0.5" style="flex:1"><span>обобщение</span>
+<button class="btn" id="mrd-sweep">↔ свип</button></div>
+<div class="row"><span id="mrd-state"></span></div>
+<div class="nav">
+<h3>Приборы смысла</h3><div class="grid">
+<a href="p36-meaning-oscilloscope.html">Осциллограф<br><small>фазовый портрет</small></a>
+<a href="p37-phi-meter.html">Φ-метр<br><small>формула витальности</small></a>
+<a href="p38-semantic-metro.html">Семантическое метро<br><small>поезд мысли</small></a>
+<a href="p39-growing-text.html">Растущий текст<br><small>L-система</small></a>
+<a href="p40-hybrid-codifier.html">Кодификатор<br><small>число↔слово</small></a>
+<a href="p41-word-reactor.html">Реактор слов<br><small>слияние/деление</small></a>
+<a href="p42-theme-loom.html">Ткацкий станок<br><small>узор тем</small></a>
+<a href="p43-representation-ladder.html">Лестница<br><small>число·формула·теорема·слово</small></a>
+</div>
+<h3>Транспорт слов</h3><div class="grid">
+<a href="p31-word-transport-2.html">Ядро 2.0<br><small>генератор фраз</small></a>
+<a href="p32-word-transport-tree.html">Дерево перебора</a>
+<a href="p33-word-transport-thesaurus.html">Тезаурус</a>
+<a href="p34-word-transport-judge.html">Судья (оффлайн+LLM)</a>
+<a href="p35-word-transport-game.html">Игра «Рычаг смысла»</a>
+</div>
+<h3>Документы</h3><div class="grid">
+<a href="../docs/12-humanitarian-formula-of-meaning.md">12 · формула Φ</a>
+<a href="../docs/13-words-numbers-hybrids.md">13 · Меридо (слова·цифры)</a>
+<a href="../docs/14-ladder-number-formula-theorem-word.md">14 · лестница смысла</a>
+<a href="../index.html">↩ хаб games/02</a>
+</div></div>
+<div class="note">Стрелочные приборы — функции λ: осмысленность M(λ)=4λ(1−λ); конкретность=1−λ; обобщённость=λ; витальность=M, обнулённая у полюсов. Полоса снизу — уровень представления (число/формула/теорема/слово) по λ. Файл: prototype/p44-dashboard.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var lam=0.5,sweep=false,sd=1,last=0;
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function dial(ctx,cx,cy,r,v,label,col,uic,track){
+ ctx.lineCap='round';ctx.lineWidth=7;ctx.strokeStyle=track;ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI);ctx.stroke();
+ ctx.strokeStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,Math.PI+Math.max(0.001,v)*Math.PI);ctx.stroke();
+ var ang=Math.PI+v*Math.PI;ctx.strokeStyle=uic;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ang)*(r-5),cy+Math.sin(ang)*(r-5));ctx.stroke();
+ ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,3,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(v.toFixed(2),cx,cy-r*0.35);
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText(label,cx,cy+16);ctx.textAlign='start';}
+function panel(){var c=document.getElementById('mrd-panel');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||300;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A',track=d?'#3a3a3f':'#e2e0d8';
+ // λ-дуга сверху
+ var x0=70,x1=W-70,y=46;
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-9,(x1-x0)*0.12,18);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-9,(x1-x0)*0.12,18);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-9,(x1-x0)*0.3,18);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('шум · дробление',x0,y-15);ctx.textAlign='right';ctx.fillText('коллапс · обобщение',x1,y-15);ctx.textAlign='center';ctx.fillStyle='#1D9E75';ctx.fillText('живая зона',(x0+x1)/2,y-15);
+ var mx=x0+(x1-x0)*lam;var bad=lam<0.12||lam>0.88;ctx.fillStyle=bad?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(mx,y,8,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='13px system-ui';ctx.fillText('λ = '+lam.toFixed(2),10,y+5);ctx.textAlign='start';
+ // 4 стрелочных прибора
+ var M=4*lam*(1-lam);var vit=bad?0:M;
+ var dials=[['осмысленность M(λ)',M,'#1D9E75'],['конкретность',1-lam,'#D85A30'],['обобщённость',lam,'#7F77DD'],['витальность Φ',vit,'#1D9E75']];
+ var rowY=H-78;var dw=W/4;var rr=Math.min(dw*0.34,56,(H-110)/1.2);
+ for(var i=0;i<4;i++){var cx=dw*i+dw/2;dial(ctx,cx,rowY,rr,Math.max(0,Math.min(1,dials[i][1])),dials[i][0],dials[i][2],uic,track);}}
+var REP=[['ЧИСЛО',0,0.23],['ФОРМУЛА',0.23,0.5],['ТЕОРЕМА',0.5,0.77],['СЛОВО',0.77,1.01]];
+function strip(){var e=document.getElementById('mrd-strip');if(!e)return;var cur=-1;for(var i=0;i<REP.length;i++)if(lam>=REP[i][1]&&lam<REP[i][2])cur=i;
+ if(e.children.length!==REP.length){e.innerHTML='';for(i=0;i<REP.length;i++){var d=document.createElement('div');d.className='cell';d.textContent=REP[i][0];e.appendChild(d);}}
+ for(i=0;i<REP.length;i++)e.children[i].className='cell'+(i===cur?' on':'');}
+function state(){var e=document.getElementById('mrd-state');if(!e)return;var t,c;if(lam<0.12){t='ШУМ — дробление за гранью';c='#D85A30';}else if(lam>0.88){t='КОЛЛАПС — обобщение за гранью';c='#7F77DD';}else{t='ЖИВАЯ ЗОНА — смысл держится';c='#1D9E75';}
+ e.innerHTML='<span class="lamp" style="background:'+c+'"></span><b style="color:'+c+'">'+t+'</b>';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;if(sweep){lam+=sd*dt*0.18;if(lam>=0.98){lam=0.98;sd=-1;}if(lam<=0.02){lam=0.02;sd=1;}document.getElementById('mrd-l').value=lam;}
+ var M=4*lam*(1-lam);FX.ambient(0.02*M);FX.freq(110+lam*150);panel();strip();state();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-l').oninput=function(){lam=parseFloat(this.value);sweep=false;$('mrd-sweep').className='btn';};
+$('mrd-sweep').onclick=function(){sweep=!sweep;this.className='btn'+(sweep?' on':'');};
+window.addEventListener('resize',panel);requestAnimationFrame(loop);
+})();
+</script></body></html>

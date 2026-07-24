@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Семантическая станция (шаг 1 / B-усечённый)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:420px;border:1px solid var(--border);border-radius:12px;touch-action:none}
+.f{font-size:12px;color:var(--text-muted);margin-top:10px;font-family:ui-monospace,Consolas,monospace}
+.lam{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text-secondary)}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 14px;font-size:13px}
+.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Семантическая станция (шаг 1)</div>
+<div class="sub">инфоны разнотипны: класс (цвет), полярность p (кольцо: тёплое +/холодное −), тег (буква), сродство a (размер). Исход встречи решает формула R</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="f">R = w₁·тег + w₂·(−p·p) + w₃·(a·a), &nbsp;×&nbsp;g(λ)=4λ(1−λ) &nbsp;→&nbsp; посл. R = <b id="mrd-r">—</b>, исход: <b id="mrd-out">—</b></div>
+<div class="lam"><span>w₁ тег</span><input id="mrd-wt" type="range" min="0" max="1" step="0.05" value="0.5"><span>w₂ поляр.</span><input id="mrd-wp" type="range" min="0" max="1" step="0.05" value="0.5"><span>w₃ сродство</span><input id="mrd-wa" type="range" min="0" max="1" step="0.05" value="0.3"></div>
+<div class="lam"><span>дробление</span><input id="mrd-lam" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span>обобщение</span><span style="min-width:56px;color:var(--text-secondary)">λ=<b id="mrd-lamv" style="color:var(--text-primary)">0.50</b></span></div>
+<div class="row"><button class="btn" id="mrd-reset">↻ заново</button><button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat" style="color:#1D9E75">слияния: <b id="mrd-mg">0</b></span>
+<span class="stat" style="color:#378ADD">обмены (влияние): <b id="mrd-ex">0</b></span>
+<span class="stat" style="color:#D85A30">отталкивания: <b id="mrd-rp">0</b></span></div>
+<div class="note">«Обмен» = одна частица ВЛИЯЕТ на другую: тяжёлая передаёт свой тег лёгкой и подтягивает полярность (зачаток цепной реакции). Слияние при разной полярности + совпадении тега + высоком R. Файл: prototype/p22-semantic-station.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var TAGS=['А','Б','В','Г'];
+var W=0,H=0,cx=0,cy=0,Rm=58,Rq=104,inf=[],lam=0.5,wt=0.5,wp=0.5,wa=0.3,sa=0,racc=0,last=0,fl=[],T={mg:0,ex:0,rp:0},lastR='—',lastOut='—',CAP=5;
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA',st:'#2A2A2D',o:'#3A3A3C'}:{ui:'#2C2C2A',st:'#ECEAE3',o:'#E0DED7'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||560;H=r.height||420;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;}
+function reset(){inf=[];fl=[];T={mg:0,ex:0,rp:0};lastR='—';lastOut='—';}
+function spawn(){var a=Math.random()*TAU,R=Math.max(W,H)*0.6,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a),dx=cx-x,dy=cy-y,d=Math.hypot(dx,dy);
+ inf.push({x:x,y:y,vx:dx/d*70,vy:dy/d*70,cls:1+((Math.random()*3)|0),m:1,p:Math.random()*2-1,s:(Math.random()*4)|0,a:Math.random(),st:'in'});}
+function waits(){return inf.filter(function(o){return o.st==='wait';});}
+function leave(o,sp){o.st='leave';var dx=o.x-cx,dy=o.y-cy,d=Math.hypot(dx,dy)||1;o.vx=dx/d*90*sp;o.vy=dy/d*90*sp;}
+function flash(x,y,tx,c){fl.push({x:x,y:y,tx:tx,c:c,t:0.9});}
+function resolve(a,b){var g=4*lam*(1-lam),tag=a.s===b.s?1:0,pol=-a.p*b.p,aff=a.a*b.a;
+ var R=(wt*tag+wp*pol+wa*aff)*g;lastR=R.toFixed(2);var mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+ if(a.p*b.p>0.15){T.rp++;lastOut='отталкивание';flash(mx,my,'отталкивание','#D85A30');FX.blip(200,0.05,'sawtooth');leave(a,1.5);leave(b,1.5);}
+ else if(R>=0.45&&a.s===b.s&&a.cls<5&&b.cls<5){T.mg++;lastOut='слияние';var hv=a.m>=b.m?a:b;
+  a.cls=Math.min(5,Math.max(a.cls,b.cls)+1);a.m=a.m+b.m;a.p=(a.p+b.p)/2;a.s=hv.s;a.a=Math.min(1,(a.a+b.a)/2);
+  flash(mx,my,'слияние','#1D9E75');FX.blip(660,0.05);b.dead=true;leave(a,1);}
+ else{T.ex++;lastOut='обмен (влияние)';var H2=a.m>=b.m?a:b,L=a.m>=b.m?b:a;L.s=H2.s;var mp=(a.p+b.p)/2;a.p=mp;b.p=mp;var ma=(a.a+b.a)/2;a.a=ma;b.a=ma;
+  flash(mx,my,'обмен','#378ADD');FX.blip(440,0.05,'triangle');leave(a,1);leave(b,1);}}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;sa+=dt;if(sa>=0.6){sa=0;spawn();}
+ var _M=4*lam*(1-lam);FX.ambient(0.03*_M);FX.freq(110+lam*150);
+ var wc=waits().length;
+ for(var i=inf.length-1;i>=0;i--){var o=inf[i];if(o.dead){inf.splice(i,1);continue;}
+  if(o.st==='in'){o.x+=o.vx*dt;o.y+=o.vy*dt;if(Math.hypot(o.x-cx,o.y-cy)<Rm){if(wc<CAP){o.st='wait';o.vx=0;o.vy=0;wc++;}else{o.st='queued';o.qa=Math.random()*TAU;}}}
+  else if(o.st==='queued'){o.x=cx+Rq*Math.cos(o.qa);o.y=cy+Rq*Math.sin(o.qa);if(waits().length<CAP){o.st='in';var dx=cx-o.x,dy=cy-o.y,d=Math.hypot(dx,dy);o.vx=dx/d*70;o.vy=dy/d*70;}}
+  else if(o.st==='leave'){o.x+=o.vx*dt;o.y+=o.vy*dt;if(o.x<-30||o.x>W+30||o.y<-30||o.y>H+30)inf.splice(i,1);}}
+ racc+=dt;var ws=waits();if(ws.length>=2&&racc>=0.4){racc=0;var a=ws[0],b=ws[1],bd=1e9;for(var j=1;j<ws.length;j++){var d=Math.hypot(ws[j].x-a.x,ws[j].y-a.y);if(d<bd){bd=d;b=ws[j];}}resolve(a,b);}
+ for(i=fl.length-1;i>=0;i--){fl[i].t-=dt;if(fl[i].t<=0)fl.splice(i,1);}
+ draw();hud();requestAnimationFrame(loop);}
+function drawInf(o){var r=8+o.a*5;ctx.fillStyle=colOf(o.cls);ctx.beginPath();ctx.arc(o.x,o.y,r,0,TAU);ctx.fill();
+ ctx.strokeStyle=o.p>0?'#EF9F27':'#378ADD';ctx.lineWidth=1+Math.abs(o.p)*3.5;ctx.beginPath();ctx.arc(o.x,o.y,r+3,0,TAU);ctx.stroke();
+ ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=2.5;ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.strokeText(TAGS[o.s],o.x,o.y);ctx.fillText(TAGS[o.s],o.x,o.y);ctx.textBaseline='alphabetic';ctx.textAlign='start';}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);
+ ctx.strokeStyle=t.o;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(cx,cy,Rq,0,TAU);ctx.stroke();ctx.setLineDash([]);
+ ctx.fillStyle=t.st;ctx.strokeStyle=t.ui;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,Rm,0,TAU);ctx.fill();ctx.stroke();
+ ctx.fillStyle=t.ui;ctx.font='12px system-ui';ctx.textAlign='center';ctx.fillText('станция',cx,cy-Rm-8);ctx.textAlign='start';
+ for(var i=0;i<inf.length;i++)drawInf(inf[i]);
+ for(i=0;i<fl.length;i++){var f=fl[i];ctx.fillStyle=f.c;ctx.globalAlpha=Math.min(1,f.t*1.4);ctx.font='600 13px system-ui';ctx.textAlign='center';ctx.fillText(f.tx,f.x,f.y);ctx.globalAlpha=1;ctx.textAlign='start';}}
+function hud(){var e;e=document.getElementById('mrd-lamv');if(e)e.textContent=lam.toFixed(2);
+ e=document.getElementById('mrd-r');if(e)e.textContent=lastR;e=document.getElementById('mrd-out');if(e)e.textContent=lastOut;
+ e=document.getElementById('mrd-mg');if(e)e.textContent=T.mg;e=document.getElementById('mrd-ex');if(e)e.textContent=T.ex;e=document.getElementById('mrd-rp');if(e)e.textContent=T.rp;}
+document.getElementById('mrd-reset').onclick=reset;
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+function bind(id,f){var e=document.getElementById(id);if(e)e.oninput=function(){f(parseFloat(e.value));};}
+bind('mrd-wt',function(v){wt=v;});bind('mrd-wp',function(v){wp=v;});bind('mrd-wa',function(v){wa=v;});bind('mrd-lam',function(v){lam=v;});
+addEventListener('resize',rz);rz();requestAnimationFrame(loop);})();
+</script></body></html>

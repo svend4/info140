@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Пульс проекта (CD·VT·CR·DB из info1)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-g{display:block;width:100%;height:280px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.mrow{display:flex;align-items:center;gap:8px;margin:5px 0}
+.mrow .nm{min-width:190px;font-size:12.5px}.mrow .nm b{font-size:13px}
+.gauge{position:relative;flex:1;max-width:280px;height:14px;border-radius:7px;background:var(--border);overflow:hidden}
+.gauge .zone{position:absolute;top:0;height:100%;background:#1D9E75;opacity:0.25}
+.gauge .pin{position:absolute;top:0;width:3px;height:100%;background:var(--text-primary)}
+.mrow .val{min-width:74px;font-size:12.5px;text-align:right}
+.ok{color:#1D9E75;font-weight:600}.bad{color:#D85A30;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.hl{font-size:15px;font-weight:600}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Пульс проекта</div>
+<div class="sub">живые метрики здоровья из методологии ⇑⇓↔ (info1, health_metrics.py — графически): проект растёт документами на 9 уровнях α, операторы ⇑⇓↔ создают связи, а четыре стрелки показывают, в норме ли система. Перекос рычага — и DB выходит из зоны</div>
+<canvas id="mrd-g"></canvas>
+<div class="panel"><h3>Метрики (целевые зоны — зелёные; формулы из SCIENTIFIC-PAPER.md)</h3>
+<div class="mrow"><span class="nm"><b>DB</b> · баланс абстр./конкр. &lt;30%</span><div class="gauge" id="g-db"></div><span class="val" id="v-db">—</span></div>
+<div class="mrow"><span class="nm"><b>VT</b> · вертик. трассируемость 50–70%</span><div class="gauge" id="g-vt"></div><span class="val" id="v-vt">—</span></div>
+<div class="mrow"><span class="nm"><b>CD</b> · плотность ↔-связей 10–20%</span><div class="gauge" id="g-cd"></div><span class="val" id="v-cd">—</span></div>
+<div class="mrow"><span class="nm"><b>CR</b> · интеграция новых 0.7–1.5</span><div class="gauge" id="g-cr"></div><span class="val" id="v-cr">—</span></div>
+<div style="margin-top:6px" class="hl" id="mrd-health">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ проект растёт</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label></div>
+<div class="row"><span style="color:var(--text-secondary)">уклон роста:</span><span>⇓ конкретика</span>
+<input id="mrd-bias" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1"><span>обобщение ⇑</span></div>
+<div class="row"><span style="color:var(--text-secondary)">связывание ↔:</span><span>мало</span>
+<input id="mrd-link" type="range" min="0" max="1" step="0.05" value="0.4" style="flex:1"><span>много</span></div>
+<div class="note">DB = |Abstract% − Concrete%| — эмпирический прокси отклонения рычага от λ=0.5 (в info1 за 38 циклов сам сошёлся 45→29.8%). CD — доля документов с ↔-связями: целевой ДИАПАЗОН, не максимум (перегрузка связями тоже болезнь — как монотон в ткани p42). VT — доля с вертикальными связями (⇑⇓, «зачем/как»). CR — связей на новый документ (окно 10). Уклоните рост в абстракцию или залейте связями — и увидите, как стрелки покидают зоны. Файл: prototype/p57-health-metrics.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var LVN=['+4 онтология','+3 философия','+2 законы','+1 принципы','0 концепция','−1 спецификации','−2 шаблоны','−3 примеры','−4 код'];
+var docs=[],hist=[],run=true,spd=3,bias=0.5,plink=0.4,acc=0,last=0;
+function reset(){docs=[{a:0,v:false,h:false,x:0.5}];hist=[];}
+function addDoc(){ // уровень по уклону: bias→абстракция
+ var r=Math.random();var lvl;
+ var m=(bias-0.5)*2; // -1..1
+ var g=Math.random()+Math.random()+Math.random();g=(g/3-0.5)*2; // ~нормальное -1..1
+ var t=Math.max(-1,Math.min(1,g*0.55+m*0.75));
+ lvl=Math.round(t*4);
+ var d={a:lvl,v:false,h:false,x:0.08+Math.random()*0.84};
+ // вертикальная связь: к документу соседнего уровня
+ var vc=null;for(var t2=0;t2<8;t2++){var q=docs[Math.floor(Math.random()*docs.length)];if(Math.abs(q.a-lvl)===1){vc=q;break;}}
+ var links=0;
+ if(vc&&Math.random()<0.75){d.v=true;vc.v=true;d.vTo=vc;links++;}
+ // горизонтальная ↔
+ var hc=null;for(t2=0;t2<8;t2++){var q2=docs[Math.floor(Math.random()*docs.length)];if(q2.a===lvl&&q2!==d){hc=q2;break;}}
+ if(hc&&Math.random()<plink){d.h=true;hc.h=true;d.hTo=hc;links++;}
+ docs.push(d);if(docs.length>80)docs.shift();
+ hist.push(links);if(hist.length>10)hist.shift();
+ FX.blip(300+ (lvl+4)*30,0.025);}
+function metrics(){var n=docs.length||1;var ab=0,co=0,vt=0,cd=0;
+ for(var i=0;i<docs.length;i++){var d=docs[i];if(d.a>0)ab++;if(d.a<0)co++;if(d.v)vt++;if(d.h)cd++;}
+ var DB=Math.abs(ab-co)/n*100;var VT=vt/n*100;var CD=cd/n*100;
+ var CR=0;if(hist.length){var s=0;for(i=0;i<hist.length;i++)s+=hist[i];CR=s/hist.length;}
+ return {DB:DB,VT:VT,CD:CD,CR:CR,n:n};}
+function inz(v,lo,hi){return v>=lo&&v<=hi;}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-g');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||280;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var x0=118,x1=W-16;
+ function Y(a){return 18+(4-a)/8*(H-36);}
+ // уровни
+ for(var a=4;a>=-4;a--){var y=Y(a);
+  ctx.strokeStyle=d?'#33333a':'#e6e4da';ctx.lineWidth=a===0?1.6:0.8;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+  ctx.fillStyle=a===0?'#1D9E75':(d?'#888780':'#9A9A93');ctx.font=(a===0?'600 ':'')+'10px system-ui';ctx.textAlign='left';ctx.fillText(LVN[4-a],8,y+3);}
+ // связи
+ for(var i=0;i<docs.length;i++){var dd=docs[i];var x=x0+dd.x*(x1-x0),y=Y(dd.a);
+  if(dd.vTo&&docs.indexOf(dd.vTo)>=0){var q=dd.vTo;ctx.strokeStyle='#1D9E75';ctx.globalAlpha=0.35;ctx.lineWidth=1;
+   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x0+q.x*(x1-x0),Y(q.a));ctx.stroke();ctx.globalAlpha=1;}
+  if(dd.hTo&&docs.indexOf(dd.hTo)>=0){var q2=dd.hTo;ctx.strokeStyle='#378ADD';ctx.globalAlpha=0.35;ctx.lineWidth=1;
+   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x0+q2.x*(x1-x0),Y(q2.a));ctx.stroke();ctx.globalAlpha=1;}}
+ // документы
+ for(i=0;i<docs.length;i++){dd=docs[i];x=x0+dd.x*(x1-x0);y=Y(dd.a);
+  ctx.beginPath();ctx.arc(x,y,4,0,6.283);ctx.fillStyle=dd.a>0?'#7F77DD':dd.a<0?'#D85A30':'#1D9E75';ctx.fill();}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='right';ctx.fillText('документов: '+docs.length,W-10,14);ctx.textAlign='start';}
+function gauge(id,val,lo,hi,max,fmt){var g=document.getElementById(id);if(!g)return;
+ var zl=lo/max*100,zw=(hi-lo)/max*100;var p=Math.max(0,Math.min(100,val/max*100));
+ g.innerHTML='<div class="zone" style="left:'+zl+'%;width:'+zw+'%"></div><div class="pin" style="left:calc('+p+'% - 1px)"></div>';}
+function render(){draw();var m=metrics();
+ gauge('g-db',m.DB,0,30,100);gauge('g-vt',m.VT,50,70,100);gauge('g-cd',m.CD,10,20,100);gauge('g-cr',m.CR,0.7,1.5,3);
+ function V(id,v,ok,fmt){var e=document.getElementById(id);if(e)e.innerHTML='<span class="'+(ok?'ok':'bad')+'">'+fmt+'</span>';}
+ V('v-db',m.DB,m.DB<30,m.DB.toFixed(1)+'%');V('v-vt',m.VT,inz(m.VT,50,70),m.VT.toFixed(1)+'%');
+ V('v-cd',m.CD,inz(m.CD,10,20),m.CD.toFixed(1)+'%');V('v-cr',m.CR,inz(m.CR,0.7,1.5),m.CR.toFixed(2));
+ var okc=(m.DB<30?1:0)+(inz(m.VT,50,70)?1:0)+(inz(m.CD,10,20)?1:0)+(inz(m.CR,0.7,1.5)?1:0);
+ var e=document.getElementById('mrd-health');if(e){var col=okc===4?'#1D9E75':okc>=2?'#EF9F27':'#D85A30';
+  e.innerHTML='здоровье системы: <span style="color:'+col+'">'+okc+'/4 метрик в норме</span>'+(okc===4?' — живая зона по всем осям ✓':m.DB>=30?' — перекос рычага (DB)!':'');}}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;var m=metrics();FX.ambient(0.012+0.01*(4-Math.min(4,m.DB/10)));
+ if(run){acc+=dt;var iv=1.2-spd*0.15;if(acc>=iv){acc=0;addDoc();}}
+ render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ проект растёт':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-bias').oninput=function(){bias=parseFloat(this.value);};
+$('mrd-link').oninput=function(){plink=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',render);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

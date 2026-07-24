@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Паспорт понятия</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:7px;padding:6px 11px;font-size:13px}.tab.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1)}
+.passport{border:1px solid var(--border);border-radius:12px;margin-top:10px;background:var(--surface-1);overflow:hidden}
+.phead{padding:11px 14px;background:var(--surface-2);border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.phead .nm{font-size:20px;font-weight:600}.phead .code{font-family:var(--mono);color:#1D9E75;font-size:14px}
+.sec{padding:9px 14px;border-bottom:1px solid var(--border)}.sec:last-child{border-bottom:0}
+.sec h4{margin:0 0 5px;font-size:12px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+#mrd-arc{display:block;width:100%;height:54px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.kv{font-size:13px;margin:2px 0}.kv .k{color:var(--text-secondary)}
+.rep{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+.rep .lab{min-width:64px;font-size:11px;color:var(--text-muted)}
+.rep .val{flex:1}.rep .val.mono{font-family:var(--mono);color:#378ADD}
+.comp{display:flex;height:7px;width:80px;border-radius:4px;overflow:hidden;border:1px solid var(--border)}.comp .d{background:#378ADD}.comp .l{background:#EF9F27}
+.vbig{font-size:15px;font-weight:600}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Паспорт понятия</div>
+<div class="sub">синтез всего стека на одном экране: код Меридо (docs/13) → рычаг λ и M(λ) → четыре представления (docs/14) → реальная верификация (p47) → вердикт</div>
+<div class="tabs" id="mrd-tabs"></div>
+<div class="passport" id="mrd-pp"></div>
+<canvas id="mrd-arc" style="margin-top:10px"></canvas>
+<div class="note">Паспорт сводит вместе: идентичность (код·слог·шкала·R-фасеты), положение на рычаге (λ, M(λ), состояние), лестницу представлений с долей цифр/букв и верифицируемость, посчитанную реально (FRM — пересчётом, THM — выборкой; у «велосипеда» честной формулы нет → V неприменима). Файл: prototype/p49-concept-passport.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+function vM(f){var ok=0,t=0;function e(a,b){t++;if(Math.abs(a-b)<0.01)ok++;}e(f(0.5),1);e(f(0),0);e(f(1),0);e(f(0.3),f(0.7));t++;if(f(0.5)>=f(0.8))ok++;return ok/t;}
+var C={
+ 'смысл':{code:'4.01',syl:'мыс01',S:'QTY (величина)',lam:0.5,num:'4.01.0',form:'M(λ)=4λ(1−λ)',theo:'максимум 1 при λ=0.5; ноль на полюсах λ→0, λ→1',word:'смысл живёт между дроблением и обобщением, в живой середине',V:vM(function(l){return 4*l*(1-l);}),vm:'THM, выборкой',ok:true},
+ 'движение':{code:'2.02',syl:'дви02',S:'QTY (величина)',lam:0.55,num:'2.02.1',form:'v=Δs/Δt',theo:'путь s=∫v·dt; при v>0 накопление монотонно',word:'движение — непрерывная смена положения во времени',V:1,vm:'FRM, пересчётом',ok:true},
+ 'свет':{code:'3.02',syl:'све02',S:'QTY (величина)',lam:0.4,num:'3.02.2',form:'E=h·ν',theo:'энергия кванта пропорциональна частоте ν',word:'свет — поток квантов, несущих энергию и зарю',V:1,vm:'FRM, пересчётом',ok:true},
+ 'время':{code:'5.01',syl:'вре01',S:'QTY (величина)',lam:0.6,num:'5.01.0',form:'Δt=t₂−t₁',theo:'длительность аддитивна: Δt(a,c)=Δt(a,b)+Δt(b,c)',word:'время — то, что течёт и не возвращается, мерило перемен',V:1,vm:'FRM, пересчётом',ok:true},
+ 'город':{code:'1.04',syl:'гор04',S:'ID (метка)',lam:0.5,num:'1.04.0',form:'Ул·m + Дм·n + Сеть',theo:'связность сети растёт с числом улиц; коллапс при сжатии к центру',word:'город — плотная сеть улиц, домов и путей, живущая обменом',V:0.5,vm:'MERO (состав) — сверка, не пересчёт',ok:false},
+ 'велосипед':{code:'2.07',syl:'вел07',S:'ID (метка)',lam:0.42,num:'2.07.3',form:'Кл2·Рм1·Цп1·Пд2',theo:'(честной доказуемой теоремы нет — см. docs/14)',word:'велосипед — двухколёсное средство, ведомое педалями и равновесием',V:null,vm:'MERO; вычислимой формулы нет (docs/14)',ok:false}
+};
+var CK=Object.keys(C),ci=0;
+function comp(s){var dig=(s.match(/[0-9]/g)||[]).length;var let=(s.match(/[A-Za-zА-Яа-яЁёΑ-Ωα-ω]/g)||[]).length;var tot=dig+let||1;return {df:dig/tot,lf:let/tot};}
+function compBar(s){var c=comp(s);return '<span class="comp"><span class="d" style="width:'+(c.df*100)+'%"></span><span class="l" style="width:'+(c.lf*100)+'%"></span></span>';}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||54;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var it=C[CK[ci]];var x0=70,x1=W-70,y=H-15;var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-7,(x1-x0)*0.12,14);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-7,(x1-x0)*0.12,14);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-7,(x1-x0)*0.3,14);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('дробление',x0,y-9);ctx.textAlign='right';ctx.fillText('обобщение',x1,y-9);
+ var mx=x0+(x1-x0)*it.lam;ctx.fillStyle='#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+it.lam.toFixed(2),8,y+4);ctx.textAlign='start';}
+function render(){var it=C[CK[ci]];var M=4*it.lam*(1-it.lam);var st=it.lam<0.12?'шум':it.lam>0.88?'коллапс':'живая зона';
+ var Vtxt=(it.V===null)?'<span style="color:#888780">неприменима</span>':'<span style="color:'+(it.V>=0.9?'#1D9E75':it.V>=0.5?'#EF9F27':'#D85A30')+'">'+it.V.toFixed(2)+'</span>';
+ var verdict;if(it.V===null)verdict='живая зона, но честной вычислимой формулы НЕТ — только состав (честно, docs/14)';
+ else if(it.V>=0.9)verdict='живая зона + формула/теорема верифицируемы — полноценная единица смысла';
+ else verdict='живая зона; представление — состав, верифицируемо частично';
+ var h='';
+ h+='<div class="phead"><span class="nm">'+CK[ci]+'</span><span class="code">'+it.code+' · '+it.syl+'</span></div>';
+ h+='<div class="sec"><h4>идентичность (Меридо)</h4><div class="kv"><span class="k">код:</span> <span class="code" style="font-family:var(--mono);color:#1D9E75">'+it.num+'</span> · <span class="k">слог-гибрид:</span> '+it.syl+' · <span class="k">шкала:</span> '+it.S+'</div><div class="kv"><span class="k">R-фасеты:</span> NUM · FRM · THM · WRD</div></div>';
+ h+='<div class="sec"><h4>положение на рычаге</h4><div class="kv"><span class="k">λ =</span> '+it.lam.toFixed(2)+' · <span class="k">M(λ) =</span> '+M.toFixed(2)+' · <span class="k">состояние:</span> <b style="color:'+(st==='живая зона'?'#1D9E75':'#D85A30')+'">'+st+'</b></div></div>';
+ h+='<div class="sec"><h4>четыре представления (доля цифр/букв)</h4>'+
+   '<div class="rep"><span class="lab">① число</span><span class="val mono">'+it.num+'</span>'+compBar(it.num)+'</div>'+
+   '<div class="rep"><span class="lab">② формула</span><span class="val mono">'+it.form+'</span>'+compBar(it.form)+'</div>'+
+   '<div class="rep"><span class="lab">③ теорема</span><span class="val">'+it.theo+'</span>'+compBar(it.theo)+'</div>'+
+   '<div class="rep"><span class="lab">④ слово</span><span class="val">'+it.word+'</span>'+compBar(it.word)+'</div></div>';
+ h+='<div class="sec"><h4>верификация (реально)</h4><div class="kv"><span class="vbig">V = '+Vtxt+'</span> &nbsp;<span class="k">метод:</span> '+it.vm+'</div></div>';
+ h+='<div class="sec"><h4>вердикт</h4><div class="kv">'+verdict+'</div></div>';
+ document.getElementById('mrd-pp').innerHTML=h;arc();FX.blip(440+it.lam*120,0.03);}
+var tabs=document.getElementById('mrd-tabs');for(var i=0;i<CK.length;i++){(function(k){var b=document.createElement('div');b.className='tab'+(k===0?' on':'');b.textContent=CK[k];b.onclick=function(){ci=k;var ch=tabs.children;for(var j=0;j<ch.length;j++)ch[j].className='tab'+(j===k?' on':'');render();};tabs.appendChild(b);})(i);}
+window.addEventListener('resize',arc);render();
+})();
+</script></body></html>

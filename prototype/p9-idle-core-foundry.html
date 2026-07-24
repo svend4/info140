@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Фабрика Ядра» (Проход 5)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--radius:8px;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}
+@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}
+.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:240px;border:1px solid var(--border);border-radius:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:var(--radius);padding:7px 12px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}
+.stat b{color:var(--text-primary);font-weight:500}
+.bar{height:9px;border-radius:5px;background:var(--border);overflow:hidden;width:120px;display:inline-block;vertical-align:middle}
+.bar>i{display:block;height:100%;background:#1D9E75;width:0%}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="h1">MERIDIAN — «Фабрика Ядра» (idle)</div>
+<div class="sub">доход = M(λ): и «всё в C5» (жадность → коллапс), и «всё в C0» (распыление → шум) обнуляют прибыль. Богатеет баланс</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="row">
+<button id="mrd-snd" class="btn">♪ звук</button>
+<button class="btn" id="mrd-prod">+ произвести C0</button>
+<button class="btn" id="mrd-merge">слить ▲</button>
+<button class="btn" id="mrd-drib">дробить ▼</button>
+<button class="btn" id="mrd-am">авто-синтез (50)</button>
+<button class="btn" id="mrd-ad">авто-распад (50)</button>
+</div>
+<div class="row">
+<button class="btn" id="mrd-prestige">Большой Распад</button>
+<button class="btn" id="mrd-reset">↻ заново</button>
+<span class="stat">резонанс: <b id="mrd-res">0</b></span>
+<span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat">эхо: <b id="mrd-echo">0</b></span>
+<span class="stat">доход/с: <b id="mrd-inc">0</b></span>
+</div>
+<div class="row">
+<span class="stat">λ: <b id="mrd-lam">0.00</b></span>
+<span class="stat">M(λ): <span class="bar"><i id="mrd-mbar"></i></span></span>
+<span class="stat">состояние: <b id="mrd-state">—</b></span>
+</div>
+<div class="note">«Слить» 2×C(k)→C(k+1) (вверх к ядру), «Дробить» C(k)→2×C(k−1) (вниз к квантам). Авто-кнопки покупаются за резонанс. «Большой Распад» = престиж: всё в C0, плюс «эхо» (×доход). Файл: prototype/p9-idle-core-foundry.html</div>
+</div>
+<script src="lib/mrd-fx.js"></script>
+<script>
+(function(){
+  var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+  var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+  var ctx=cvs.getContext('2d');
+  var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+  function colOf(cls){return RAMP[5-cls];}
+  var n=[10,0,0,0,0,0],res=0,echo=0,amB=false,adB=false,amOn=false,adOn=false;
+  var hiBest=FX.best('meridian_foundry_best');
+  var W=0,H=0,last=0,amAcc=0,adAcc=0;
+  function theme(){var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return d?{ui:'#E8E8EA',slot:'#2A2A2D'}:{ui:'#2C2C2A',slot:'#ECEAE3'};}
+  function resize(){var r=cvs.getBoundingClientRect();var dpr=window.devicePixelRatio||1;
+    W=r.width||560;H=r.height||240;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+  function total(){var s=0;for(var i=0;i<6;i++)s+=n[i];return s;}
+  function lambda(){var s=0,t=total();for(var i=0;i<6;i++)s+=i*n[i];return t?s/t/5:0.5;}
+  function doMerge(){for(var k=0;k<5;k++)if(n[k]>=2){n[k]-=2;n[k+1]++;return true;}return false;}
+  function doDribble(){for(var k=5;k>=1;k--)if(n[k]>=1){n[k]--;n[k-1]+=2;return true;}return false;}
+  function reset(){n=[10,0,0,0,0,0];res=0;echo=0;amB=false;adB=false;amOn=false;adOn=false;syncBtns();}
+  function prestige(){var g=Math.floor(Math.sqrt(res)/4);if(g<1)return;echo+=g;n=[10,0,0,0,0,0];res=0;}
+  function syncBtns(){var am=document.getElementById('mrd-am'),ad=document.getElementById('mrd-ad');
+    if(am){am.textContent=amB?('авто-синтез: '+(amOn?'вкл':'выкл')):'авто-синтез (50)';am.className='btn'+(amB&&amOn?' on':'');}
+    if(ad){ad.textContent=adB?('авто-распад: '+(adOn?'вкл':'выкл')):'авто-распад (50)';ad.className='btn'+(adB&&adOn?' on':'');}}
+  function draw(){var t=theme();ctx.clearRect(0,0,W,H);
+    var pad=10,rowH=(H-pad*2)/6,maxN=Math.max(10,n[0],n[1],n[2],n[3],n[4],n[5]);
+    for(var k=5;k>=0;k--){var ri=5-k,y=pad+ri*rowH+4,h=rowH-8;
+      ctx.fillStyle=t.slot;ctx.fillRect(50,y,W-60,h);
+      var bw=(n[k]/maxN)*(W-60);ctx.fillStyle=colOf(k);ctx.fillRect(50,y,bw,h);
+      ctx.fillStyle=t.ui;ctx.font='13px system-ui';ctx.textAlign='start';ctx.textBaseline='middle';
+      ctx.fillText('C'+k,14,y+h/2);ctx.fillText(String(n[k]),58,y+h/2);}
+    ctx.textBaseline='alphabetic';}
+  function hud(){var L=lambda(),M=4*L*(1-L),inc=6*M*(1+0.15*echo),e;
+    e=document.getElementById('mrd-res');if(e)e.textContent=Math.floor(res);
+    e=document.getElementById('mrd-best');if(e)e.textContent=Math.round(hiBest);
+    e=document.getElementById('mrd-echo');if(e)e.textContent=echo;
+    e=document.getElementById('mrd-inc');if(e)e.textContent=inc.toFixed(1);
+    e=document.getElementById('mrd-lam');if(e)e.textContent=L.toFixed(2);
+    e=document.getElementById('mrd-mbar');if(e){e.style.width=(M*100)+'%';e.style.background=M>0.5?'#1D9E75':(M>0.25?'#EF9F27':'#D85A30');}
+    var label,col;if(L>0.7){label='жадность → коллапс';col='#7F77DD';}else if(L<0.3){label='распыление → шум';col='#D85A30';}else{label='живая зона';col='#1D9E75';}
+    e=document.getElementById('mrd-state');if(e){e.textContent=label;e.style.color=col;}}
+  function loop(ts){if(!last)last=ts;var dt=Math.min(0.1,(ts-last)/1000);last=ts;
+    var L=lambda(),M=4*L*(1-L);res+=6*M*(1+0.15*echo)*dt;
+    hiBest=FX.best('meridian_foundry_best',res);
+    FX.ambient(0.03*M);FX.freq(110+L*150);
+    if(amB&&amOn){amAcc+=dt;if(amAcc>=0.5){amAcc=0;doMerge();}}
+    if(adB&&adOn){adAcc+=dt;if(adAcc>=0.5){adAcc=0;doDribble();}}
+    draw();hud();requestAnimationFrame(loop);}
+  function $(id){return document.getElementById(id);}
+  $('mrd-prod').onclick=function(){n[0]++;};
+  $('mrd-merge').onclick=function(){if(doMerge())FX.blip(660,0.05);else FX.blip(200,0.05,'sawtooth');};
+  $('mrd-drib').onclick=function(){if(doDribble())FX.blip(200,0.05,'sawtooth');};
+  $('mrd-am').onclick=function(){if(!amB){if(res>=50){res-=50;amB=true;amOn=true;}}else{amOn=!amOn;}syncBtns();};
+  $('mrd-ad').onclick=function(){if(!adB){if(res>=50){res-=50;adB=true;adOn=true;}}else{adOn=!adOn;}syncBtns();};
+  $('mrd-prestige').onclick=function(){var pe=echo;prestige();if(echo>pe)FX.chord([392,494,587,784],0.07);};
+  $('mrd-reset').onclick=function(){reset();};
+  var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+  window.addEventListener('resize',resize);
+  resize();syncBtns();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

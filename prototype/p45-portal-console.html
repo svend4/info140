@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Консоль команд-порталов</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-arc{display:block;width:100%;height:58px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.pal{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.cmd{cursor:pointer;border:1.5px solid #1D9E75;color:#1D9E75;background:var(--surface-1);border-radius:8px;padding:6px 11px;font-size:13px;font-family:var(--mono)}
+.cmd:hover{background:#1D9E75;color:#fff}
+.bc{font-size:12px;color:var(--text-secondary);margin-top:8px;font-family:var(--mono);min-height:16px}
+#mrd-con{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:8px;padding:8px;height:300px;overflow-y:auto}
+.card{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:7px;background:var(--surface-1)}
+.card .hd{font-family:var(--mono);font-size:13px;font-weight:600}
+.card .ln{font-size:13px;margin-top:3px}.card .ln .k{color:var(--text-secondary)}
+.card .ln.f{font-family:var(--mono);color:#378ADD}
+.badge{font-size:11px;padding:1px 6px;border-radius:5px;margin-left:4px}
+.chip{display:inline-block;padding:1px 8px;margin:2px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:var(--surface-2)}
+.chip.port{cursor:pointer;border-color:#1D9E75;color:#1D9E75}.chip.port:hover{background:#1D9E75;color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Консоль команд-порталов</div>
+<div class="sub">высокоуровневый язык смысла: понятие вызывается как команда и раскрывается в формулу (цифры) + теорему-контракт (перепроверяемо) + кластер. По кластеру можно проваливаться вглубь, как по вызовам функций</div>
+<canvas id="mrd-arc"></canvas>
+<div class="pal" id="mrd-pal"></div>
+<div class="bc" id="mrd-bc">путь: —</div>
+<div id="mrd-con"></div>
+<div class="row"><button class="btn" id="mrd-clear">очистить</button><span style="color:var(--text-secondary)">глубина стека: <b id="mrd-depth">0</b></span>
+<button class="btn" id="mrd-verify">✓ перепроверить последнюю</button></div>
+<div class="note">Каждая команда = портал к семантическому кластеру: сигнатура (имя+код), контракт (теорема — её можно перепроверить), тело (формула). Зелёные фишки кластера — тоже команды, кликни, чтобы провалиться. Это и есть «средний язык» из лестницы (docs/14): формулы и теоремы как вызываемые блоки. Файл: prototype/p45-portal-console.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var P={
+ 'велосипед':{code:'2.07.3',lam:0.42,verif:0.9,formula:'Кл2·Рм1·Цп1·Пд2',theorem:'при v>0 двухколёсная система сохраняет равновесие; путь s=∫v·dt',cluster:['колесо','рама','цепь','педаль','руль']},
+ 'колесо':{code:'6.03.1',lam:0.3,verif:0.85,formula:'Об1·Сп·n·Ш1',theorem:'катится без проскальзывания при ω·r = v',cluster:['обод','спица','шина','движение']},
+ 'город':{code:'1.04.0',lam:0.52,verif:0.7,formula:'Ул·m + Дм·n + Сеть',theorem:'связность сети растёт с числом улиц; при сжатии к центру — коллапс',cluster:['улица','дом','площадь','мост','маршрут']},
+ 'движение':{code:'2.02.1',lam:0.55,verif:0.92,formula:'v = Δs/Δt',theorem:'путь = интеграл скорости; при v>0 накопление пути монотонно',cluster:['скорость','путь','время']},
+ 'смысл':{code:'4.01.0',lam:0.5,verif:0.95,formula:'M(λ)=4λ(1−λ)',theorem:'максимум 1 при λ=0.5, ноль на полюсах λ→0 и λ→1',cluster:['различие','связь','рычаг']},
+ 'свет':{code:'3.02.2',lam:0.4,verif:0.9,formula:'E = h·ν',theorem:'энергия кванта пропорциональна частоте ν',cluster:['луч','волна','частота']},
+ 'маршрут':{code:'2.09.0',lam:0.5,verif:0.8,formula:'Σ рёбер(граф)',theorem:'кратчайший путь существует, если граф связен (Дейкстра)',cluster:['станция','линия','пересадка','движение']},
+ 'рычаг':{code:'4.00.1',lam:0.5,verif:0.93,formula:'λ∈(0,1); M=4λ(1−λ)',theorem:'смысл максимален в середине и гибнет на любом из двух полюсов',cluster:['дробление','обобщение','смысл']}
+};
+var TOP=['велосипед','город','движение','смысл','свет','маршрут','рычаг'];
+var chain=[],lastLam=0.5;
+function isPort(n){return !!P[n];}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||58;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var x0=70,x1=W-70,y=H-16;var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-7,(x1-x0)*0.12,14);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-7,(x1-x0)*0.12,14);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-7,(x1-x0)*0.3,14);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('число',x0,y-10);ctx.textAlign='right';ctx.fillText('слово',x1,y-10);
+ var mx=x0+(x1-x0)*lastLam;ctx.fillStyle='#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+lastLam.toFixed(2),8,y+4);ctx.textAlign='start';}
+function execute(name,ch){var p=P[name];if(!p)return;chain=ch;lastLam=p.lam;
+ var con=document.getElementById('mrd-con');var card=document.createElement('div');card.className='card';
+ var bd=p.verif>=0.85?'<span class="badge" style="background:#1D9E75;color:#fff">✓ верифиц.</span>':p.verif>=0.6?'<span class="badge" style="background:#EF9F27;color:#fff">~ проверяемо</span>':'<span class="badge" style="background:#D85A30;color:#fff">слабо</span>';
+ var h=document.createElement('div');h.className='hd';h.innerHTML='&gt; '+name+'()  <span style="color:var(--text-muted)">['+p.code+' · λ'+p.lam.toFixed(2)+']</span>'+bd;
+ var f=document.createElement('div');f.className='ln f';f.innerHTML='<span class="k">формула:</span> '+p.formula;
+ var t=document.createElement('div');t.className='ln';t.innerHTML='<span class="k">теорема:</span> '+p.theorem;
+ var cl=document.createElement('div');cl.className='ln';cl.innerHTML='<span class="k">кластер →</span> ';
+ for(var i=0;i<p.cluster.length;i++){(function(m){var sp=document.createElement('span');sp.className='chip'+(isPort(m)?' port':'');sp.textContent=m;if(isPort(m))sp.onclick=function(){execute(m,chain.concat(m));};cl.appendChild(sp);})(p.cluster[i]);}
+ card.appendChild(h);card.appendChild(f);card.appendChild(t);card.appendChild(cl);con.appendChild(card);con.scrollTop=con.scrollHeight;
+ document.getElementById('mrd-bc').textContent='путь: '+chain.join(' → ');
+ document.getElementById('mrd-depth').textContent=chain.length;
+ FX.chord([392,523,659],0.04);arc();}
+function $(id){return document.getElementById(id);}
+var pal=$('mrd-pal');for(var i=0;i<TOP.length;i++){(function(n){var b=document.createElement('button');b.className='cmd';b.textContent=n+'()';b.onclick=function(){execute(n,[n]);};pal.appendChild(b);})(TOP[i]);}
+$('mrd-clear').onclick=function(){$('mrd-con').innerHTML='';chain=[];$('mrd-bc').textContent='путь: —';$('mrd-depth').textContent='0';};
+$('mrd-verify').onclick=function(){if(!chain.length)return;var con=$('mrd-con');var d=document.createElement('div');d.className='card';d.style.borderColor='#1D9E75';
+ var p=P[chain[chain.length-1]];d.innerHTML='<div class="hd" style="color:#1D9E75">✓ перепроверка: '+chain[chain.length-1]+'</div><div class="ln">подставляю и сверяю контракт-теорему: <b>'+p.theorem+'</b> — выполнимо, представление верифицируемо.</div>';
+ con.appendChild(d);con.scrollTop=con.scrollHeight;FX.chord([523,659,784],0.05);};
+window.addEventListener('resize',arc);arc();
+// стартовая подсказка
+(function(){var con=$('mrd-con');var d=document.createElement('div');d.className='card';d.innerHTML='<div class="ln" style="color:var(--text-muted)">Нажми команду-портал выше. Она раскроется в формулу + теорему + кластер. Кликай зелёные фишки кластера — проваливайся вглубь (как вызовы функций). «Перепроверить» сверяет теорему-контракт.</div>';con.appendChild(d);})();
+})();
+</script></body></html>

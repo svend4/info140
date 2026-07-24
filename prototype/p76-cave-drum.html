@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п76 · Наскальный барабан</title>
+<style>
+:root{--bg:#0e1016;--pnl:#161a24;--ink:#e8ecf5;--dim:#93a0b4;--acc:#c24a36;--line:#232a38;--well:#0b0906;}
+@media (prefers-color-scheme:light){:root{--bg:#f4f6fb;--pnl:#fff;--ink:#1b2230;--dim:#54607a;--line:#dce3ee;--well:#0c0a07;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:14px}
+h1{font-size:18px;margin:0 0 3px}h1 small{color:var(--dim);font-weight:400;font-size:12px}
+.sub{color:var(--dim);font-size:12.5px;margin:0 0 12px}
+.grid{display:flex;gap:14px;flex-wrap:wrap}
+.col{flex:1 1 430px;min-width:300px}
+canvas{background:var(--well);border-radius:12px;display:block;touch-action:none}
+#c{width:100%;height:auto;aspect-ratio:1/1;cursor:crosshair}
+.card{background:var(--pnl);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px}
+.ctl label{font-size:12px;color:var(--dim);display:flex;gap:6px;align-items:center}
+input[type=range]{width:104px;accent-color:var(--acc)}
+button{background:#2a2016;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+@media (prefers-color-scheme:light){button{background:#eee4d8}}
+button:hover{border-color:var(--acc)}button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.meter{font-size:12px;color:var(--dim)}.meter b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>п76 · Наскальный барабан <small>— встречные вращения + удары → 2.5D псевдо-3D</small></h1>
+  <p class="sub">Наскальные фигуры-примитивы (человечек, олень, солнце, рука, рыба, спираль, птица) нарисованы на наклонённом <b>бубне</b>. Две группы вращаются <b>навстречу</b> (⟳ по часовой и ⟲ против, на разных скоростях). Честная тонкость: само по себе плоское встречное вращение — <b>плоская мандала</b>; глубину несут <b>наклон-проекция + окклюзия + градиент</b> размера/яркости, а контр-вращение добавляет <b>муар и параллакс</b> (мерцание «кожи барабана», богатство движения). <b>Удар палкой</b> рождает кольцо-волну по мембране и «выбивает» задетые фигуры (вспыхивают и подскакивают). <b>Хаос-вращение</b> — это СМАЗ (скорость/размазывание), НЕ глубина. Итог — 2.5D псевдо-3D из векторных штрихов, не настоящий 3D. Кликните по бубну — ударить.</p>
+  <div class="grid">
+    <div class="col">
+      <canvas id="c" width="460" height="460"></canvas>
+      <div class="ctl">
+        <label>⟳ слой A <input id="w1" type="range" min="0" max="40" value="14"></label>
+        <label>⟲ слой B <input id="w2" type="range" min="0" max="40" value="20"></label>
+        <button id="dirB" class="on">B: против часовой</button>
+        <label>наклон <input id="tilt" type="range" min="30" max="85" value="58"></label>
+        <button id="nod">кивок (3D-от-движения)</button>
+      </div>
+      <div class="ctl">
+        <button id="hit">🥁 удар</button>
+        <button id="auto" class="on">авто-удары</button>
+        <button id="chaos">🌀 хаос-вращение</button>
+        <label>смаз <input id="blur" type="range" min="0" max="40" value="6"></label>
+        <button id="pause">пауза</button>
+        <button id="reset">сброс</button>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="meter">Что здесь честная 2.5D, а что — смаз</div>
+        <p style="font-size:12.5px;margin:6px 0 0">• <b>Наклон-проекция</b> (диск → эллипс, y=cy+dy·sin θ) — реальный признак глубины.<br>• <b>Окклюзия</b> — ближние фигуры рисуются поверх дальних (порядок по глубине).<br>• <b>Градиент</b> размера и яркости — ближе крупнее и светлее.<br>• <b>Параллакс встречных вращений</b> — ⟳ и ⟲ движутся по-разному → мозг читает объём и вращение-в-глубину (муар).<br>• <b>Хаос-вращение</b> — честно НЕ глубина: это <b>смаз</b> (размазывание), направление может дёргаться и переворачиваться.<br>Итог — <b>2.5D псевдо-3D</b> из векторных примитивов-штрихов, а не настоящий 3D.</p>
+      </div>
+      <div class="card">
+        <div class="meter">удар по мембране</div>
+        <p style="font-size:12.5px;margin:6px 0 0">Удар возбуждает волну-кольцо от точки касания (упрощение мод бубна J<sub>m</sub>(k·r) — не полная симуляция). Кольцо пробегает — фигуры в его полосе <b>«выбиты»</b>: вспышка + подскок. Задето: <b>id=«hitc»</b> <b id="hitc">0</b></p>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+var TAU=Math.PI*2;
+var c=document.getElementById('c'), g=c.getContext('2d');
+var $=function(i){return document.getElementById(i);};
+var w1=$('w1'),w2=$('w2'),dirBtn=$('dirB'),tilt=$('tilt'),blur=$('blur');
+var hitBtn=$('hit'),autoBtn=$('auto'),chaosBtn=$('chaos'),pauseBtn=$('pause'),resetBtn=$('reset'),hitc=$('hitc');
+var CX=230,CY=230,R=185;
+var CAVE=['#d98b3a','#c24a36','#e8c79a','#9a6a3a'];
+var rotA=0, rotB=0, dirB=-1, running=true, chaos=false, autoStrike=true, nod=false;
+var cstate=0.37, tframe=0, hitCount=0;
+var figs=[], ripples=[];
+
+/* --- штриховые примитивы (порт из п73) --- */
+function glyph(ctx,ty,s,col){
+  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=Math.max(1.6,s*0.09); ctx.lineCap='round'; ctx.lineJoin='round';
+  if(ty==='human'){
+    ctx.beginPath(); ctx.arc(0,-s*0.7,s*0.16,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,-s*0.54); ctx.lineTo(0,s*0.35); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s*0.4,-s*0.1); ctx.lineTo(0,-s*0.28); ctx.lineTo(s*0.4,-s*0.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-s*0.35,s*0.85); ctx.lineTo(0,s*0.35); ctx.lineTo(s*0.35,s*0.85); ctx.stroke();
+  } else if(ty==='deer'){
+    ctx.beginPath(); ctx.ellipse(0,0,s*0.6,s*0.32,0,0,TAU); ctx.fill();
+    for(var L=0;L<4;L++){ var lx=(-0.45+L*0.3)*s; ctx.beginPath(); ctx.moveTo(lx,s*0.22); ctx.lineTo(lx,s*0.85); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(s*0.5,-s*0.08); ctx.lineTo(s*0.92,-s*0.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(s*0.97,-s*0.55,s*0.14,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(s*0.92,-s*0.66); ctx.lineTo(s*1.02,-s*1.02); ctx.moveTo(s*1.06,-s*0.62); ctx.lineTo(s*1.22,-s*0.95); ctx.stroke();
+  } else if(ty==='sun'){
+    ctx.beginPath(); ctx.arc(0,0,s*0.34,0,TAU); ctx.stroke();
+    for(var Rr=0;Rr<10;Rr++){ var an=Rr*TAU/10; ctx.beginPath(); ctx.moveTo(Math.cos(an)*s*0.44,Math.sin(an)*s*0.44); ctx.lineTo(Math.cos(an)*s*0.74,Math.sin(an)*s*0.74); ctx.stroke(); }
+  } else if(ty==='hand'){
+    ctx.beginPath(); ctx.ellipse(0,s*0.28,s*0.28,s*0.34,0,0,TAU); ctx.fill();
+    for(var F=0;F<5;F++){ var fa=(-0.5+F*0.25); ctx.lineWidth=s*0.13; ctx.beginPath(); ctx.moveTo(fa*s*0.5,s*0.02); ctx.lineTo(fa*s*0.72,-s*0.72); ctx.stroke(); }
+  } else if(ty==='fish'){
+    ctx.beginPath(); ctx.ellipse(0,0,s*0.6,s*0.28,0,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(s*0.55,0); ctx.lineTo(s*0.95,-s*0.3); ctx.lineTo(s*0.95,s*0.3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1a120a'; ctx.beginPath(); ctx.arc(-s*0.3,-s*0.05,s*0.06,0,TAU); ctx.fill();
+  } else if(ty==='spiral'){
+    ctx.beginPath(); for(var t2=0;t2<7;t2+=0.14){ var rr=t2*s*0.09, px=Math.cos(t2)*rr, py=Math.sin(t2)*rr; t2?ctx.lineTo(px,py):ctx.moveTo(px,py);} ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(-s*0.5,0); ctx.quadraticCurveTo(-s*0.2,-s*0.42,0,0); ctx.quadraticCurveTo(s*0.2,-s*0.42,s*0.5,0); ctx.stroke();
+  }
+}
+var TYPES=['human','deer','sun','hand','fish','spiral','bird'];
+function rnd(a,b){return a+Math.random()*(b-a);}
+function build(){
+  figs=[]; ripples=[]; rotA=0; rotB=0; hitCount=0;
+  for(var i=0;i<26;i++){
+    figs.push({ty:TYPES[(Math.random()*TYPES.length)|0], th:Math.random()*TAU, rho:rnd(0.14,0.96)*R,
+      grp:(i%2), size:rnd(20,34), col:CAVE[(Math.random()*CAVE.length)|0], hit:0});
+  }
+}
+build();
+
+function strike(dx,dy){ ripples.push({x:dx,y:dy,age:0}); }
+
+function step(){
+  var effT = +tilt.value + (nod ? 16*Math.sin(tframe*0.028) : 0);   // «кивок» = structure-from-motion
+  var sq=Math.sin(effT*Math.PI/180);
+  if(running){
+    tframe++;
+    cstate=3.9*cstate*(1-cstate);                 // хаотический множитель вращения
+    var cf = chaos ? (2*cstate-1)*2.4 : 1;
+    rotA += (+w1.value/1000)*cf;
+    rotB += dirB*(+w2.value/1000)*cf;
+    if(autoStrike && tframe%46===0){ var a=Math.random()*TAU, rr=rnd(0.4,0.98)*R; strike(rr*Math.cos(a), rr*Math.sin(a)); }
+    for(var r=ripples.length-1;r>=0;r--){ ripples[r].age++; if(ripples[r].age>60) ripples.splice(r,1); }
+  }
+  hitCount=0;
+  for(var f=0;f<figs.length;f++){
+    var F=figs[f], phi=F.th+(F.grp?rotB:rotA), dx=F.rho*Math.cos(phi), dy=F.rho*Math.sin(phi);
+    F._dx=dx; F._dy=dy; F._phi=phi;
+    if(running) F.hit*=0.90;
+    for(var rp=0;rp<ripples.length;rp++){
+      var Rp=ripples[rp], rad=Rp.age*3.6, dd=Math.hypot(dx-Rp.x,dy-Rp.y);
+      if(Math.abs(dd-rad)<16){ F.hit=1; }
+    }
+    if(F.hit>0.4) hitCount++;
+  }
+  return {sq:sq};
+}
+
+function draw(st){
+  var sq=st.sq;
+  // фон / смаз
+  var fa=+blur.value/100;
+  if(fa>0.01){ g.fillStyle='rgba(11,9,6,'+fa+')'; g.fillRect(0,0,c.width,c.height); }
+  else g.clearRect(0,0,c.width,c.height);
+
+  // мембрана бубна (эллипс) + обод
+  g.save();
+  g.strokeStyle='#3a2a18'; g.lineWidth=16;
+  g.beginPath(); g.ellipse(CX,CY,R+8,(R+8)*sq,0,0,TAU); g.stroke();
+  var mem=g.createRadialGradient(CX,CY-R*sq*0.4,10,CX,CY,R);
+  mem.addColorStop(0,'#2a2015'); mem.addColorStop(1,'#17100a');
+  g.fillStyle=mem; g.beginPath(); g.ellipse(CX,CY,R,R*sq,0,0,TAU); g.fill();
+  // бубенцы на ободе
+  for(var j=0;j<12;j++){ var ja=j*TAU/12; g.fillStyle='rgba(190,175,140,0.5)'; g.beginPath();
+    g.ellipse(CX+(R+8)*Math.cos(ja),CY+(R+8)*sq*Math.sin(ja),4,4*sq+1.5,0,0,TAU); g.fill(); }
+  g.restore();
+
+  // удары-кольца по мембране
+  for(var rp=0;rp<ripples.length;rp++){
+    var Rp=ripples[rp], rad=Rp.age*3.6, al=1-Rp.age/60;
+    g.strokeStyle='rgba(232,199,154,'+(al*0.5).toFixed(3)+')'; g.lineWidth=2;
+    g.beginPath(); g.ellipse(CX+Rp.x,CY+Rp.y*sq,rad,rad*sq,0,0,TAU); g.stroke();
+  }
+
+  // фигуры: сортировка back-to-front по dy (окклюзия)
+  var order=figs.slice().sort(function(a,b){return a._dy-b._dy;});
+  for(var i=0;i<order.length;i++){
+    var F=order[i], nf=F._dy/R;                 // -1 даль(верх) .. +1 близь(низ)
+    var sizeF=1+0.30*nf, bright=0.55+0.45*(nf+1)/2;
+    var sx=CX+F._dx, sy=CY+F._dy*sq - F.hit*12;  // подскок при ударе
+    g.save(); g.translate(sx,sy); g.scale(sizeF*(1+F.hit*0.35), sizeF*(1+F.hit*0.35)); g.rotate(F._phi);
+    g.globalAlpha=Math.min(1,bright);
+    // тень на мембране
+    if(F.hit<0.2){ g.globalAlpha=0.18; g.fillStyle='#000'; g.beginPath(); g.ellipse(0,F.size*0.4,F.size*0.5,F.size*0.18,0,0,TAU); g.fill(); g.globalAlpha=Math.min(1,bright); }
+    var col=F.hit>0.4 ? '#fff2cc' : F.col;
+    glyph(g,F.ty,F.size,col);
+    g.restore();
+  }
+  g.globalAlpha=1;
+  hitc.textContent=hitCount;
+}
+
+function loop(){ draw(step()); requestAnimationFrame(loop); }
+
+/* --- управление --- */
+c.addEventListener('pointerdown',function(e){
+  var rect=c.getBoundingClientRect(), scale=460/rect.width;
+  var mx=(e.clientX-rect.left)*scale-CX, my=(e.clientY-rect.top)*scale-CY;
+  var sq=Math.sin(+tilt.value*Math.PI/180); strike(mx, my/sq);
+});
+dirBtn.onclick=function(){ dirB=-dirB; dirBtn.textContent=dirB<0?'B: против часовой':'B: по часовой'; dirBtn.classList.toggle('on',dirB<0); };
+hitBtn.onclick=function(){ var a=Math.random()*TAU, rr=rnd(0.5,0.98)*R; strike(rr*Math.cos(a),rr*Math.sin(a)); };
+autoBtn.onclick=function(){ autoStrike=!autoStrike; autoBtn.classList.toggle('on',autoStrike); };
+chaosBtn.onclick=function(){ chaos=!chaos; chaosBtn.classList.toggle('on',chaos); if(chaos && +blur.value<8) blur.value=16; };
+$('nod').onclick=function(){ nod=!nod; $('nod').classList.toggle('on',nod); };
+pauseBtn.onclick=function(){ running=!running; pauseBtn.textContent=running?'пауза':'пуск'; pauseBtn.classList.toggle('on',!running); };
+resetBtn.onclick=function(){ build(); };
+
+loop();
+})();
+</script>
+</body>
+</html>

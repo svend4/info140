@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Рычаг смысла: слова (игра)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.hud{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:13px;margin-bottom:8px}
+.hud b{font-weight:600}.hud .goal{flex:1;min-width:120px}
+.gbar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-top:3px}.gbar>i{display:block;height:100%;background:#1D9E75;transition:width .2s}
+#mrd-arc{display:block;width:100%;height:80px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1)}
+.phrase{font-size:20px;font-weight:500;min-height:28px}
+.chip{display:inline-block;padding:2px 10px;margin:2px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface-2)}
+.slot{display:inline-block;padding:2px 10px;margin:2px;border-radius:7px;border:1.5px dashed #1D9E75;color:#1D9E75}
+.cards{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.card{flex:1;min-width:120px;cursor:pointer;border:1.5px solid var(--border);border-radius:10px;padding:11px;background:var(--surface-2);text-align:center;transition:transform .05s}
+.card:hover{transform:translateY(-2px)}.card .wt{font-size:17px;font-weight:600}.card .tg{font-size:11px;color:var(--text-muted);margin-top:2px}
+.fb{font-size:14px;min-height:20px;margin-top:8px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:8px 14px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.over{text-align:center;padding:16px}.over .big{font-size:24px;font-weight:600;margin-bottom:6px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Рычаг смысла: слова</div>
+<div class="sub">шаг 5: игра. Выбирай слова и удерживай фразу в живой зоне — мимо шума (λ→0) и коллапса (λ→1). С каждым уровнем живая зона уже</div>
+<div class="hud">
+ <span>Уровень <b id="mrd-lvl">1</b></span><span>Очки <b id="mrd-score">0</b></span>
+ <span id="mrd-lives">❤❤❤</span><span>Рекорд <b id="mrd-best">0</b></span>
+ <span class="goal">до цели <span id="mrd-goaln">150</span><div class="gbar"><i id="mrd-goalbar" style="width:0%"></i></div></span></div>
+<canvas id="mrd-arc"></canvas>
+<div class="panel"><div class="phrase" id="mrd-phrase">—</div></div>
+<div class="cards" id="mrd-cards"></div>
+<div class="fb" id="mrd-fb">Собери осмысленную фразу. Цвет слова = уровень обобщённости (синий — абстрактнее, оранжевый — конкретнее).</div>
+<div class="row"><button class="btn" id="mrd-new">↻ новая игра</button><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="note">Как рулить λ: абстрактные слова (синие) тянут к коллапсу (λ→1), конкретные (оранжевые) — к шуму (λ→0); связность держится близкими темами. Зелёная полоса на дуге — живая зона уровня (сужается). Слово-ловушка уводит за край = тупик и −1 жизнь. Файл: prototype/p35-word-transport-game.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+var N=[['город',1,'m','г'],['улица',1,'f','гд'],['поезд',1,'m','гд'],['мост',1,'m','гд'],['свет',2,'m','с'],['огонь',2,'m','с'],['путь',2,'m','дм'],['центр',2,'m','г'],['окраина',2,'f','г'],['сеть',3,'f','гд'],['слово',3,'n','м'],['шум',3,'m','м'],['ядро',3,'n','м'],['тишина',3,'f','в'],['смысл',4,'m','м'],['мысль',4,'f','мв'],['время',4,'n','в'],['идея',4,'f','м'],['форма',4,'f','м'],['пустота',4,'f','м'],['вечность',5,'f','в']];
+var A=[['быстр','ый',1,'д'],['плотн','ый',2,'г'],['тёмн','ый',2,'с'],['светл','ый',2,'с'],['частн','ый',2,'м'],['тих','ий',2,'в'],['жив','ой',3,'п'],['пуст','ой',3,'м'],['ясн','ый',3,'см'],['хрупк','ий',3,'м'],['главн','ый',4,'м'],['вечн','ый',5,'в']];
+var V=[['течёт',2,'д'],['кружит',2,'д'],['ведёт',2,'д'],['копит',2,'г'],['теряет',3,'м'],['рождает',3,'м'],['связывает',3,'мг'],['дробит',3,'м'],['дышит',3,'п'],['молчит',3,'в'],['ищет',3,'м'],['горит',2,'с']];
+var D=[['быстро',1,'д'],['медленно',2,'д'],['тихо',2,'в'],['ясно',3,'м'],['ярко',2,'с'],['вечно',5,'в']];
+var LEX={NOUN:N.map(function(a){return {cat:'NOUN',t:a[0],lv:a[1],g:a[2],tg:a[3].split('')};}),
+ ADJ:A.map(function(a){return {cat:'ADJ',stem:a[0],mend:a[1],lv:a[2],tg:a[3].split('')};}),
+ VERB:V.map(function(a){return {cat:'VERB',t:a[0],lv:a[1],tg:a[2].split('')};}),
+ ADV:D.map(function(a){return {cat:'ADV',t:a[0],lv:a[1],tg:a[2].split('')};})};
+function adjForm(w,g){return g==='f'?w.stem+'ая':g==='n'?w.stem+'ое':w.stem+w.mend;}
+function disp(w,ng){return w.cat==='ADJ'?adjForm(w,ng||'m'):w.t;}
+function wtext(arr,i){var w=arr[i];if(w.cat==='ADJ'){var nx=arr[i+1];return adjForm(w,(nx&&nx.cat==='NOUN')?nx.g:'m');}return w.t;}
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+function metrics(ws){var n=ws.length;if(!n)return {lam:0.5,coh:1,M:1};var s=0;for(var i=0;i<n;i++)s+=ws[i].lv;var lam=Math.max(0.02,Math.min(0.98,(s/n)/5));
+ var pairs=0,co=0;for(i=0;i<n-1;i++){pairs++;co+=cos(ws[i].tg,ws[i+1].tg);}var coh=pairs?co/pairs:0.7;return {lam:lam,coh:coh,M:4*lam*(1-lam)};}
+var LV=[
+ {tmpl:['NOUN','VERB','ADV'],lo:0.18,hi:0.82,coh:0.08,goal:150},
+ {tmpl:['ADJ','NOUN','VERB','ADV'],lo:0.22,hi:0.78,coh:0.12,goal:280},
+ {tmpl:['NOUN','VERB','ADJ','NOUN'],lo:0.26,hi:0.74,coh:0.16,goal:430},
+ {tmpl:['ADJ','NOUN','VERB','ADJ','NOUN'],lo:0.30,hi:0.70,coh:0.22,goal:620},
+ {tmpl:['ADJ','NOUN','VERB','ADJ','NOUN'],lo:0.34,hi:0.66,coh:0.28,goal:850}
+];
+var lvl=0,score=0,lives=3,combo=0,path=[],cands=[],ended=false,best=0;
+function CL(){return LV[lvl];}
+function deadL(ws){var m=metrics(ws),c=CL();return m.lam<c.lo||m.lam>c.hi||(ws.length>=2&&m.coh<c.coh);}
+function genCands(){var cat=CL().tmpl[path.length];var sc=LEX[cat].map(function(w){var tr=path.concat(w);var m=metrics(tr);return {w:w,m:m,dead:deadL(tr),s:0.45*m.M+0.55*m.coh};});
+ var safe=sc.filter(function(x){return !x.dead;}).sort(function(a,b){return b.s-a.s;});
+ var trap=sc.filter(function(x){return x.dead;});
+ var out=safe.slice(0,Math.min(safe.length,trap.length?3:4));
+ if(trap.length&&out.length<4)out.push(trap[Math.floor(Math.random()*trap.length)]);
+ while(out.length<4&&safe.length>out.length)out.push(safe[out.length]);
+ for(var i=out.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=out[i];out[i]=out[j];out[j]=t;}
+ return out;}
+function newPhrase(){path=[];cands=genCands();}
+function newGame(){lvl=0;score=0;lives=3;combo=0;ended=false;newPhrase();render();}
+function levelUp(){if(lvl>=LV.length-1){ended='win';FX.chord([523,659,784,1047],0.08);return;}lvl++;lives++;combo=0;newPhrase();fb('Уровень '+(lvl+1)+'! Живая зона сузилась.','#1D9E75');FX.chord([523,659,784],0.06);}
+function complete(){var m=metrics(path);var bonus=40+combo*4;score+=bonus;FX.chord([587,740],0.05);
+ if(score>=CL().goal){fb('Фраза собрана! +'+bonus+' (бонус). Цель уровня достигнута.','#1D9E75');levelUp();}
+ else{fb('Фраза собрана! +'+bonus+' (бонус). Дальше — новая фраза.','#1D9E75');newPhrase();}}
+function pick(x){if(ended)return;var tr=path.concat(x.w);
+ if(deadL(tr)){lives--;combo=0;var m=metrics(tr);var why=m.lam<CL().lo?'шум (λ→0)':m.lam>CL().hi?'коллапс (λ→1)':'бессвязно';
+  fb('Тупик: '+why+'. −1 жизнь.','#D85A30');FX.blip(150,0.05,'sawtooth');
+  if(lives<=0){ended='over';best=Math.max(best,score);FX.best&&FX.best('mrd_wgame',score);}
+  render();return;}
+ path.push(x.w);var m=metrics(path);var pts=Math.round(30*(0.45*m.M+0.55*m.coh))+5+combo*2;score+=pts;combo++;
+ best=Math.max(best,score);FX.blip(440+x.w.lv*40,0.03);
+ if(path.length>=CL().tmpl.length){fb('+'+pts,'#1D9E75');complete();}
+ else{cands=genCands();fb('+'+pts+(combo>1?'  комбо ×'+combo:''),'#1D9E75');}
+ render();}
+function fb(t,c){var e=document.getElementById('mrd-fb');if(e){e.textContent=t;e.style.color=c||'';}}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||80;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var x0=70,x1=W-70,y=H-24;var d=darkOn();var uic=d?'#E8E8EA':'#2C2C2A';var cl=CL();
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-9,(x1-x0)*cl.lo,18);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*cl.hi,y-9,(x1-x0)*(1-cl.hi),18);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.18;ctx.fillRect(x0+(x1-x0)*cl.lo,y-9,(x1-x0)*(cl.hi-cl.lo),18);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('шум',x0,y-15);ctx.textAlign='center';ctx.fillStyle='#1D9E75';ctx.fillText('живая зона уровня',(x0+x1)/2,y-15);ctx.textAlign='right';ctx.fillStyle=uic;ctx.fillText('коллапс',x1,y-15);
+ var m=metrics(path);var mx=x0+(x1-x0)*m.lam;ctx.fillStyle=deadL(path)?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+m.lam.toFixed(2),8,y+4);ctx.textAlign='start';}
+function render(){arc();
+ document.getElementById('mrd-lvl').textContent=(lvl+1);document.getElementById('mrd-score').textContent=score;
+ document.getElementById('mrd-best').textContent=best;document.getElementById('mrd-goaln').textContent=CL().goal;
+ document.getElementById('mrd-lives').textContent=lives>0?Array(lives+1).join('❤'):'—';
+ var gp=Math.min(100,Math.round(score/CL().goal*100));document.getElementById('mrd-goalbar').style.width=gp+'%';
+ var ph='';for(var i=0;i<path.length;i++)ph+='<span class="chip" style="border-color:'+colLv(path[i].lv)+'">'+wtext(path,i)+'</span> ';
+ var tm=CL().tmpl;for(i=path.length;i<tm.length;i++)ph+='<span class="slot">'+(i===path.length?'▸ '+tm[i]:tm[i])+'</span> ';
+ document.getElementById('mrd-phrase').innerHTML=ph||'—';
+ var box=document.getElementById('mrd-cards');box.innerHTML='';
+ if(ended){box.innerHTML='<div class="over" style="width:100%"><div class="big" style="color:'+(ended==='win'?'#1D9E75':'#D85A30')+'">'+(ended==='win'?'Победа! Все уровни пройдены 🎉':'Игра окончена')+'</div><div style="color:var(--text-secondary)">Очки: '+score+' · Рекорд: '+best+'</div></div>';return;}
+ var ng=(CL().tmpl[path.length+1]==='NOUN')?null:'m';
+ for(i=0;i<cands.length;i++){(function(x){var b=document.createElement('div');b.className='card';var c0=colLv(x.w.lv);
+  b.innerHTML='<div class="wt" style="color:'+c0+'">'+disp(x.w,(x.w.cat==='ADJ'?'m':null))+'</div><div class="tg">темы: '+(x.w.tg.join('')||'—')+'</div>';
+  b.onclick=function(){pick(x);};box.appendChild(b);})(cands[i]);}}
+function loop(){var m=metrics(path);FX.ambient(0.02*m.M);FX.freq(110+m.lam*150);requestAnimationFrame(loop);}
+document.getElementById('mrd-new').onclick=newGame;
+document.getElementById('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',arc);
+try{best=parseInt(localStorage.getItem('mrd_wgame')||'0',10)||0;}catch(e){}
+newGame();requestAnimationFrame(loop);
+})();
+</script></body></html>

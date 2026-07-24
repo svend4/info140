@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п80 · 3D Q6 Center</title>
+<link rel="stylesheet" href="p79-p80-neighbor-worlds.css?v=1.0.1">
+</head>
+<body>
+<main class="q6App">
+  <div id="q6Viewport" class="q6Viewport" aria-label="трёхмерная проекция шестимерного гиперкуба Q6"></div>
+  <header class="q6Top">
+    <div class="worldBar">
+      <div class="worldTitle">
+        <h1>п80 · 3D Q6 Center</h1>
+        <p>64 состояния · 192 ребра · один диагностический бит за переход.</p>
+      </div>
+      <nav class="worldNav" aria-label="соседние миры">
+        <a class="worldLink two" href="p78-living-ring-interface.html">2D · кольцо</a>
+        <a class="worldLink three active" href="p80-hypercube-center-3d.html" aria-current="page">3D · Q6</a>
+      </nav>
+    </div>
+  </header>
+
+  <aside class="q6Dock">
+    <div class="q6DockHead">
+      <div class="eyebrow">профиль p78-center-safety-v0</div>
+      <h2>Шесть проверяемых условий</h2>
+      <p id="q6StateLabel">?????? · PARTIAL</p>
+    </div>
+    <div class="q6Controls">
+      <div id="q6Bits" class="bitList"></div>
+      <div class="q6Actions">
+        <button id="q6Diagnose" class="primary" type="button">диагностика</button>
+        <button id="q6Counterfactual" type="button">одно изменение</button>
+      </div>
+      <div id="q6Status" class="statusLine" data-status="PARTIAL">PARTIAL · заполните известные условия</div>
+      <dl id="q6Proof" class="q6Proof"></dl>
+    </div>
+    <div class="q6DockFoot">
+      <div class="metricStrip">
+        <div><span>вершины</span><b id="q6Vertices">64</b></div>
+        <div><span>степень</span><b id="q6Degree">6</b></div>
+        <div><span>рёбра</span><b id="q6Edges">192</b></div>
+        <div><span>путь</span><b id="q6Path">—</b></div>
+      </div>
+    </div>
+  </aside>
+  <div id="q6Legend" class="q6Legend" aria-label="цвета изменяемых битов"></div>
+</main>
+<script src="vendor/three-r128.min.js?v=128"></script>
+<script src="lib/p78-exchange-contract.js?v=1.0.0"></script>
+<script src="lib/p78-q6-diagnostics.js?v=1.0.0"></script>
+<script src="lib/p80-hypercube-center-runtime.js?v=1.0.1"></script>
+</body>
+</html>

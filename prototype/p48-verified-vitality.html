@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Проверенная витальность Φ·V</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.pal{display:flex;flex-wrap:wrap;gap:6px}
+.cl{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);border-radius:8px;padding:6px 9px;font-size:12px;display:flex;align-items:center;gap:6px}
+.cl:hover{border-color:#1D9E75}.cl .vd{width:9px;height:9px;border-radius:50%}.cl .rb{font-size:9px;padding:0 4px;border-radius:4px;color:#fff}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.prog{font-size:14px;line-height:1.7;min-height:28px}
+.pi{display:block;margin:2px 0}.pi .vt{font-size:10px;padding:0 5px;border-radius:4px;color:#fff;margin-left:5px}
+.cand{display:flex;align-items:center;gap:8px;margin:3px 0}.cand .w{min-width:150px}
+.bar{height:10px;border-radius:5px;background:var(--border);overflow:hidden;flex:1;max-width:240px}.bar>i{display:block;height:100%}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Проверенная витальность Φ·V</div>
+<div class="sub">отложенный шаг docs/14: ввести вычисленную V в витальность. Текст должен быть И живым (Φ: связный рост), И истинным (V: перепроверяемо). Живой, но лживый абзац набирает высокий Φ — и обнуляется по V</div>
+<div class="pal" id="mrd-pal"></div>
+<div class="panel"><h3>Доказательный абзац</h3><div class="prog" id="mrd-prog">— добавляй утверждения выше (зелёная точка = проверяемо, красная = ложь/непроверяемо) —</div></div>
+<div class="panel"><h3>Оценка</h3><div id="mrd-met">—</div><div id="mrd-vd" style="margin-top:6px"></div></div>
+<div class="row"><button class="btn" id="mrd-auto">✨ собрать проверенный</button><button class="btn" id="mrd-pop">⌫ убрать</button><button class="btn" id="mrd-clr">очистить</button></div>
+<div class="note">Φ = ⟨M(λ)⟩·avg(g·N·κ)·κ_end (живость, как docs/12). V = среднее РЕАЛЬНО вычисленной верифицируемости утверждений (пересчёт формул / выборка теорем / равенство постулатов; ложное и непроверяемое → низкое). Итог Φ·V = живой И истинный. «Собрать проверенный» жадно максимизирует Φ·V (обходит ложь). Файл: prototype/p48-verified-vitality.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RC={NUM:'#888780',FRM:'#378ADD',THM:'#1D9E75',MERO:'#EF9F27',WRD:'#7F77DD'};
+function vM(f){var ok=0,t=0;function e(a,b){t++;if(Math.abs(a-b)<0.01)ok++;}e(f(0.5),1);e(f(0),0);e(f(1),0);e(f(0.3),f(0.7));t++;if(f(0.5)>=f(0.8))ok++;return ok/t;}
+var C={
+ 'mmax':{lb:'M(λ) макс в центре',R:'THM',tg:'м',lam:0.5,V:vM(function(l){return 4*l*(1-l);})},
+ 'vlaw':{lb:'v=Δs/Δt',R:'FRM',tg:'д',lam:0.55,V:1},
+ 'area':{lb:'S=πr²',R:'FRM',tg:'г',lam:0.5,V:1},
+ 'sum4':{lb:'2+2=4',R:'NUM',tg:'м',lam:0.2,V:(2+2===4?1:0)},
+ 'path':{lb:'путь растёт при v>0',R:'THM',tg:'д',lam:0.55,V:1},
+ 'light':{lb:'свет: E=hν',R:'FRM',tg:'с',lam:0.45,V:1},
+ 'time':{lb:'путь s=∫v·dt',R:'THM',tg:'дв',lam:0.6,V:1},
+ 'sum5':{lb:'2+2=5 ✗',R:'NUM',tg:'м',lam:0.2,V:(2+2===5?1:0)},
+ 'mbroke':{lb:'M(λ)=4λ (сломано)',R:'FRM',tg:'м',lam:0.5,V:vM(function(l){return 4*l;})},
+ 'velost':{lb:'велосипед устойчив всегда',R:'WRD',tg:'д',lam:0.4,V:0},
+ 'velomero':{lb:'велосипед=Кл2·Рм·Цп·Пд2',R:'MERO',tg:'дг',lam:0.35,V:0.5}
+};
+var KEYS=Object.keys(C);
+var prog=[],lamAvg=0.5;
+function tg(k){return C[k].tg.split('');}
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+function openness(k){var c=0;for(var i=0;i<KEYS.length;i++){if(KEYS[i]===k)continue;if(cos(tg(k),tg(KEYS[i]))>0)c++;}return c/(KEYS.length-1);}
+function metrics(pr){if(!pr.length)return {K:0,Phi:0,V:0,PV:0,g:0,N:0,k:0,lam:0.5};
+ var s=0,sv=0;for(var i=0;i<pr.length;i++){s+=C[pr[i]].lam;sv+=C[pr[i]].V;}var lam=s/pr.length;var B=4*lam*(1-lam);
+ var seen={},theme={},sum=0,gL=0,NL=0,kL=0;
+ for(i=0;i<pr.length;i++){var n=pr[i];var g=(i===0)?0.6:cos(tg(pr[i-1]),tg(n));var nov=seen[n]?0.3:1;var nt=0,tgs=tg(n);for(var j=0;j<tgs.length;j++)if(!theme[tgs[j]])nt++;var cov=nt/(nt+1);var N=0.5*nov+0.5*cov;var k=openness(n);sum+=g*N*k;seen[n]=1;for(j=0;j<tgs.length;j++)theme[tgs[j]]=1;gL=g;NL=N;kL=k;}
+ var avg=sum/pr.length;var kEnd=openness(pr[pr.length-1]);var Phi=B*avg*kEnd;var V=sv/pr.length;return {K:pr.length,Phi:Phi,V:V,PV:Phi*V,g:gL,N:NL,k:kL,lam:lam};}
+function $(id){return document.getElementById(id);}
+function vcol(v){return v>=0.9?'#1D9E75':v>=0.5?'#EF9F27':'#D85A30';}
+function render(){var m=metrics(prog);lamAvg=m.lam;
+ var e=$('mrd-prog');if(!prog.length){e.innerHTML='<span style="color:var(--text-muted)">— добавляй утверждения выше (зелёная точка = проверяемо, красная = ложь/непроверяемо) —</span>';}
+ else{var h='';for(var i=0;i<prog.length;i++){var c=C[prog[i]];h+='<span class="pi">• '+c.lb+'<span class="vt" style="background:'+RC[c.R]+'">'+c.R+'</span><span class="vt" style="background:'+vcol(c.V)+'">V='+c.V.toFixed(2)+'</span></span>';}e.innerHTML=h;}
+ function brow(l,v,cc){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,v))*100)+'%;background:'+cc+'"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+ $('mrd-met').innerHTML=brow('Φ — живость текста',m.Phi,'#378ADD')+brow('V — истинность (проверено)',m.V,'#EF9F27')+brow('Φ·V — проверенная витальность',m.PV,'#1D9E75');
+ var vd;if(!m.K)vd='<span style="color:var(--text-muted)">пусто</span>';
+ else if(m.PV>0.22)vd='<b style="color:#1D9E75">живой И истинный текст</b>';
+ else if(m.Phi>0.25&&m.V<0.6)vd='<b style="color:#D85A30">живой, но содержит ложь/непроверяемое — Φ·V обрушился</b>';
+ else if(m.Phi<=0.12)vd='<b style="color:#EF9F27">не живой: распад или застой</b>';
+ else vd='<b style="color:#EF9F27">рыхло / частично проверяемо</b>';
+ $('mrd-vd').innerHTML='вердикт: '+vd+' <span style="color:var(--text-muted)">· K='+m.K+'</span>';}
+function add(k){prog.push(k);if(prog.length>8)prog.shift();FX.blip(C[k].V>0.6?520:200,0.03,C[k].V>0.6?'sine':'sawtooth');render();}
+function autostep(){var best=null,bv=-1;for(var i=0;i<KEYS.length;i++){var m=metrics(prog.concat(KEYS[i]));var d=m.PV-(metrics(prog).PV);if(d>bv){bv=d;best=KEYS[i];}}if(best&&bv>0.001){add(best);return true;}return false;}
+var pal=$('mrd-pal');for(var i=0;i<KEYS.length;i++){(function(k){var c=C[k];var b=document.createElement('div');b.className='cl';b.innerHTML='<span class="vd" style="background:'+vcol(c.V)+'"></span>'+c.lb+'<span class="rb" style="background:'+RC[c.R]+'">'+c.R+'</span>';b.onclick=function(){add(k);};pal.appendChild(b);})(KEYS[i]);}
+$('mrd-auto').onclick=function(){var n=0;var iv=setInterval(function(){if(!autostep()||prog.length>=6||n++>6){clearInterval(iv);FX.chord([523,659,784],0.05);}},220);};
+$('mrd-pop').onclick=function(){prog.pop();render();};
+$('mrd-clr').onclick=function(){prog=[];render();};
+render();
+})();
+</script></body></html>

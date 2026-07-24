@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Φ-метр (витальность траектории)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-arc{display:block;width:100%;height:70px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+#mrd-spark{display:block;width:100%;height:70px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.phrase{font-size:18px;font-weight:500;min-height:26px}
+.chip{display:inline-block;padding:2px 9px;margin:2px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface-2)}
+.slot{display:inline-block;padding:2px 10px;margin:2px;border-radius:7px;border:1.5px dashed #1D9E75;color:#1D9E75}
+.cand{display:flex;align-items:center;gap:8px;margin:3px 0}.cand .w{min-width:170px;color:var(--text-secondary)}
+.bar{height:9px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:230px}.bar>i{display:block;height:100%;background:#1D9E75}
+.phi .w{font-weight:600;color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.log{font-size:13px;line-height:1.7}.log b{color:var(--text-primary);font-weight:500}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+.eq{font-size:12px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;margin-top:6px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Φ-метр</div>
+<div class="sub">прибор честно считает формулу Φ из docs/12 на живом генераторе: каждый шаг — рост g · новизна N · открытость κ; на полюсах и в застое Φ→0</div>
+<canvas id="mrd-arc"></canvas>
+<div class="panel"><h3>Текущая траектория (одна принятая ветвь)</h3><div class="phrase" id="mrd-phrase">—</div></div>
+<div class="panel"><h3>Φ-метр текущего шага</h3>
+<div id="mrd-step">—</div>
+<div class="eq">Φ = ⟨B⟩ · (1/K)·Σ gₜ·Nₜ·κₜ · κ_end &nbsp; — рост × новизна × открытость, по живому хребту, открытая в будущее</div></div>
+<canvas id="mrd-spark"></canvas>
+<div class="panel"><h3>Найденные фразы (по убыванию Φ)</h3><div class="log" id="mrd-found">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ генерировать</button><button class="btn" id="mrd-step2">шаг</button><button class="btn" id="mrd-reset">↻ сброс</button>
+<label>скорость <input id="mrd-spd" type="range" min="1" max="14" step="1" value="4"></label><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="note">g=связность при добавлении слова (редукция ⇒ 0); N=½(1−повтор словоформ)+½(новые темы); κ=b/(b+1), b=число неполюсных продолжений по полному слоту; ⟨B⟩=среднее M(λ); κ_end=1 при завершении шаблона. Реализованы баг-фиксы docs/12 (κ_end, formKey для ADJ, наследование тем по узлам, coh=0 для одиночного слова). Файл: prototype/p37-phi-meter.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+var N=[['город',1,'m','г'],['улица',1,'f','гд'],['поезд',1,'m','гд'],['мост',1,'m','гд'],['свет',2,'m','с'],['огонь',2,'m','с'],['путь',2,'m','дм'],['центр',2,'m','г'],['окраина',2,'f','г'],['сеть',3,'f','гд'],['слово',3,'n','м'],['шум',3,'m','м'],['ядро',3,'n','м'],['тишина',3,'f','в'],['смысл',4,'m','м'],['мысль',4,'f','мв'],['время',4,'n','в'],['идея',4,'f','м'],['форма',4,'f','м'],['пустота',4,'f','м'],['вечность',5,'f','в']];
+var A=[['быстр','ый',1,'д'],['плотн','ый',2,'г'],['тёмн','ый',2,'с'],['светл','ый',2,'с'],['частн','ый',2,'м'],['тих','ий',2,'в'],['жив','ой',3,'п'],['пуст','ой',3,'м'],['ясн','ый',3,'см'],['хрупк','ий',3,'м'],['главн','ый',4,'м'],['вечн','ый',5,'в']];
+var V=[['течёт',2,'д'],['кружит',2,'д'],['ведёт',2,'д'],['копит',2,'г'],['теряет',3,'м'],['рождает',3,'м'],['связывает',3,'мг'],['дробит',3,'м'],['дышит',3,'п'],['молчит',3,'в'],['ищет',3,'м'],['горит',2,'с']];
+var D=[['быстро',1,'д'],['медленно',2,'д'],['тихо',2,'в'],['ясно',3,'м'],['ярко',2,'с'],['вечно',5,'в']];
+var LEX={NOUN:N.map(function(a){return {cat:'NOUN',t:a[0],lv:a[1],g:a[2],tg:a[3].split('')};}),
+ ADJ:A.map(function(a){return {cat:'ADJ',stem:a[0],mend:a[1],lv:a[2],tg:a[3].split('')};}),
+ VERB:V.map(function(a){return {cat:'VERB',t:a[0],lv:a[1],tg:a[2].split('')};}),
+ ADV:D.map(function(a){return {cat:'ADV',t:a[0],lv:a[1],tg:a[2].split('')};})};
+function adjForm(w,g){return g==='f'?w.stem+'ая':g==='n'?w.stem+'ое':w.stem+w.mend;}
+function formKey(w){return w.cat==='ADJ'?(w.stem+w.mend):w.t;}
+function wtext(arr,i){var w=arr[i];if(w.cat==='ADJ'){var nx=arr[i+1];return adjForm(w,(nx&&nx.cat==='NOUN')?nx.g:'m');}return w.t;}
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+function metrics(ws){var n=ws.length;if(!n)return {lam:0.5,coh:0,M:0};var s=0;for(var i=0;i<n;i++)s+=ws[i].lv;var lam=Math.max(0.02,Math.min(0.98,(s/n)/5));
+ var pairs=0,co=0;for(i=0;i<n-1;i++){pairs++;co+=cos(ws[i].tg,ws[i+1].tg);}var coh=pairs?co/pairs:0;return {lam:lam,coh:coh,M:4*lam*(1-lam)};}
+function dead(ws){var m=metrics(ws);return m.lam<0.12||m.lam>0.88||(ws.length>=2&&m.coh<0.12);}
+var TMPL=[['ADJ','NOUN','VERB','ADV'],['NOUN','VERB','NOUN'],['NOUN','VERB','ADJ','NOUN'],['NOUN','VERB','ADV'],['ADJ','NOUN','VERB','ADJ','NOUN']];
+var CAP=4;
+function bLive(pw,cat){var arr=LEX[cat],L=0;for(var i=0;i<arr.length;i++)if(!dead(pw.concat(arr[i])))L++;return L;}
+function candsFor(pw){var slot=pw.length;var arr=LEX[tmpl[slot]].slice();for(var i=0;i<arr.length;i++){var m=metrics(pw.concat(arr[i]));arr[i]._s=0.45*m.M+0.55*m.coh;}arr.sort(function(a,b){return b._s-a._s;});return arr.slice(0,CAP);}
+function mkChild(parent,w){var pw=parent.pw.concat(w);var m=metrics(pw);
+ var node={word:w,pw:pw,depth:parent.depth+1,parent:parent,children:[],status:'open',_id:nid++,lam:m.lam,coh:m.coh,B:m.M};
+ node.g=(pw.length>parent.depth)?m.coh:0;
+ var seen={},rep=0;for(var i=0;i<pw.length;i++){var k=formKey(pw[i]);if(seen[k])rep++;seen[k]=1;}node.repP=pw.length?rep/pw.length:0;
+ node.Theme={};for(var key in parent.Theme)node.Theme[key]=1;var nt=0;for(i=0;i<w.tg.length;i++){if(!node.Theme[w.tg[i]]){nt++;node.Theme[w.tg[i]]=1;}}node.cov=nt/(nt+1);
+ node.Nv=0.5*(1-node.repP)+0.5*node.cov;
+ if(node.depth>=tmpl.length){node.kappa=1;node.bl='—';}else{var L=bLive(pw,tmpl[node.depth]);node.bl=L;node.kappa=L/(L+1);}
+ node.phi=node.g*node.Nv*node.kappa;return node;}
+function PHI(leaf){var path=[],n=leaf;while(n&&n.word){path.unshift(n);n=n.parent;}var K=path.length;if(!K)return {phi:0,K:0,B:0};
+ var sp=0,sb=0;for(var i=0;i<K;i++){sp+=path[i].phi;sb+=path[i].B;}var kend=(leaf.depth>=tmpl.length)?1:leaf.kappa;return {phi:(sb/K)*(sp/K)*kend,K:K,B:sb/K,kend:kend};}
+var tmpl=TMPL[0],root=null,curNode=null,found=[],done=false,run=true,spd=4,acc=0,last=0,ti=0,nid=0;
+function newRun(){tmpl=TMPL[(ti++)%TMPL.length];nid=0;root={word:null,pw:[],depth:0,parent:null,children:[],Theme:{},_id:nid++};curNode=root;done=false;}
+function step(){if(done){newRun();return;}var n=curNode;
+ if(n.depth>=tmpl.length){var r=PHI(n);found.push({ph:phraseText(n.pw),phi:r.phi,lam:metrics(n.pw).lam,K:r.K});found.sort(function(a,b){return b.phi-a.phi;});if(found.length>8)found.pop();FX.chord([523,659,784],0.05);n.status='done';curNode=n.parent;return;}
+ if(!n.cands){n.cands=candsFor(n.pw);n.ci=0;}
+ if(n.ci>=n.cands.length){n.status='done';if(n===root)done=true;else curNode=n.parent;return;}
+ var w=n.cands[n.ci++];var child=mkChild(n,w);n.children.push(child);
+ if(dead(child.pw)){child.status='dead';FX.blip(160,0.03,'sawtooth');}else{child.status='open';curNode=child;FX.blip(440+w.lv*40,0.03);}}
+function phraseText(arr){var o=[];for(var i=0;i<arr.length;i++)o.push(wtext(arr,i));return o.join(' ');}
+function pathNodes(){var a=[],n=curNode;while(n&&n.word){a.unshift(n);n=n.parent;}return a;}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||70;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var x0=70,x1=W-70,y=H-20;var d=darkOn();var uic=d?'#E8E8EA':'#2C2C2A';var pw=curNode?curNode.pw:[];
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-8,(x1-x0)*0.12,16);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-8,(x1-x0)*0.12,16);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-8,(x1-x0)*0.3,16);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('шум',x0,y-12);ctx.textAlign='right';ctx.fillText('коллапс',x1,y-12);
+ var m=metrics(pw);var mx=x0+(x1-x0)*m.lam;ctx.fillStyle=dead(pw)?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+m.lam.toFixed(2),8,y+4);ctx.textAlign='start';}
+function spark(){var c=document.getElementById('mrd-spark');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||70;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn();var uic=d?'#E8E8EA':'#2C2C2A';var pn=pathNodes();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('φₜ = gₜ·Nₜ·κₜ по шагам траектории',8,14);
+ if(!pn.length){return;}var n=pn.length,pad=24,bw=(W-2*pad)/n*0.7,gap=(W-2*pad)/n*0.3;
+ for(var i=0;i<n;i++){var x=pad+i*((W-2*pad)/n)+gap/2;var h=Math.max(2,pn[i].phi*(H-26));var col=pn[i].phi>0.4?'#1D9E75':pn[i].phi>0.15?'#EF9F27':'#D85A30';
+  ctx.fillStyle=col;ctx.fillRect(x,H-6-h,bw,h);ctx.fillStyle=uic;ctx.font='9px system-ui';ctx.textAlign='center';ctx.fillText(pn[i].phi.toFixed(2),x+bw/2,H-8-h);}
+ ctx.textAlign='start';}
+function brow(l,v,cls){return '<div class="cand '+(cls||'')+'"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,v))*100)+'%"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+function render(){arc();spark();var e,i;var pw=curNode?curNode.pw:[];
+ var h='';for(i=0;i<pw.length;i++)h+='<span class="chip" style="border-color:'+colLv(pw[i].lv)+'">'+wtext(pw,i)+'</span> ';
+ for(i=pw.length;i<tmpl.length;i++)h+='<span class="slot">'+(i===pw.length?'▸ '+tmpl[i]:tmpl[i])+'</span> ';
+ e=document.getElementById('mrd-phrase');if(e)e.innerHTML=h||'<span style="color:var(--text-muted)">старт…</span>';
+ var n=curNode;var html;
+ if(n&&n.word){var diag='';var mn=Math.min(n.g,n.Nv,n.kappa);if(n.phi<0.2){diag=mn===n.g?' <b style="color:#D85A30">↓ нет роста/связи</b>':mn===n.Nv?' <b style="color:#EF9F27">↓ застой</b>':' <b style="color:#D85A30">↓ тупик</b>';}
+  html=brow('рост g (связность)',n.g)+brow('новизна N',n.Nv)+brow('открытость κ (b='+n.bl+')',n.kappa)+brow('зона B=M(λ)',n.B)+'<div style="margin-top:3px;color:var(--text-secondary)">шаг φ = g·N·κ = <b>'+n.phi.toFixed(3)+'</b>'+diag+'</div>';}
+ else html='<span style="color:var(--text-muted)">выбор первого слова…</span>';
+ e=document.getElementById('mrd-step');if(e)e.innerHTML=html;
+ var fh='';for(i=0;i<found.length;i++){var col=found[i].phi>0.3?'#1D9E75':found[i].phi>0.12?'#EF9F27':'#D85A30';fh+='<div>Φ=<b style="color:'+col+'">'+found[i].phi.toFixed(3)+'</b> · <b>'+found[i].ph+'</b> <span style="color:var(--text-muted)">(λ '+found[i].lam.toFixed(2)+', K='+found[i].K+')</span></div>';}
+ e=document.getElementById('mrd-found');if(e)e.innerHTML=fh||'<span style="color:var(--text-muted)">пока ничего</span>';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.1,(ts-last)/1000);last=ts;var pw=curNode?curNode.pw:[];var m=metrics(pw);FX.ambient(0.02*m.M);FX.freq(110+m.lam*150);
+ if(run){acc+=dt;var iv=1/spd;while(acc>=iv){acc-=iv;step();}}render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ генерировать':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-step2').onclick=function(){run=false;$('mrd-run').textContent='▶ генерировать';$('mrd-run').className='btn';step();};
+$('mrd-reset').onclick=function(){found=[];newRun();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',function(){arc();spark();});newRun();requestAnimationFrame(loop);
+})();
+</script></body></html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Кристалл смысла</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:440px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);touch-action:none;cursor:grab}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.lamp{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-1px;margin-right:5px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Кристалл смысла</div>
+<div class="sub">созвездие всех понятий проекта в псевдо-3D. Тяни мышью — вращай. Рычаг к обобщению сжимает кристалл в одну точку (коллапс), к дроблению — распыляет в осколки (шум); жив он только в средней оболочке</div>
+<canvas id="mrd-c"></canvas>
+<div class="panel"><div id="mrd-st"></div></div>
+<div class="row"><button class="btn on" id="mrd-rot">⟳ вращение</button><button class="btn" id="mrd-snd">♪ звук</button>
+<span style="color:var(--text-secondary)">рычаг:</span><span>распылить</span>
+<input id="mrd-b" type="range" min="0.04" max="0.96" step="0.01" value="0.5" style="flex:1"><span>сжать</span></div>
+<div class="note">Положение узла: тема → азимут (6 секторов), уровень обобщённости → высота, цвет → класс C0–C5. Рёбра-связи соединяют понятия одной темы (решётка кристалла). Рычаг = λ всего поля: середина (λ≈0.5) — живая светящаяся оболочка, полюса гасят и схлопывают/разносят кристалл. Итог всего проекта MERIDIAN на одном экране. Файл: prototype/p50-meaning-crystal.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+var TH={м:0,д:1,с:2,в:3,г:4,п:5};
+var RAW=[['смысл','м',4],['мысль','м',4],['идея','м',4],['слово','м',3],['рычаг','м',5],
+['движение','д',2],['путь','д',2],['маршрут','д',3],['поток','д',2],
+['свет','с',2],['заря','с',2],['огонь','с',2],
+['время','в',4],['тишина','в',3],['вечность','в',5],['миг','в',1],
+['город','г',1],['мост','г',1],['сеть','г',3],
+['река','п',2],['сад','п',2]];
+var N=RAW.map(function(a,i){var th=TH[a[1]];var az=(th/6)*Math.PI*2+((i%3-1)*0.16);var el=((a[2]/5)-0.5)*Math.PI*0.85;
+ return {w:a[0],th:a[1],lv:a[2],az:az,el:el,bx:Math.cos(el)*Math.cos(az),by:Math.sin(el),bz:Math.cos(el)*Math.sin(az)};});
+var links=[];for(var i=0;i<N.length;i++)for(var j=i+1;j<N.length;j++)if(N[i].th===N[j].th)links.push([i,j]);
+var A=0,tilt=0.3,auto=true,b=0.5,last=0,drag=false,px=0,py=0;
+function radiusF(){return b<=0.5?(1+(0.5-b)/0.5*0.9):(1-(b-0.5)/0.5*0.9);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||440;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,S=Math.min(W,H)*0.32;var R=radiusF();
+ var ca=Math.cos(A),sa=Math.sin(A),ct=Math.cos(tilt),stt=Math.sin(tilt);
+ var bad=b<0.12||b>0.88;
+ // живая оболочка (полупрозрачная сфера R=1)
+ ctx.strokeStyle=bad?'#D85A30':'#1D9E75';ctx.globalAlpha=0.18;ctx.lineWidth=1;
+ for(var rr=0;rr<2;rr++){ctx.beginPath();ctx.ellipse(cx,cy,S*Math.min(R,1.3),S*Math.min(R,1.3)*(0.4+rr*0.0),0,0,6.283);ctx.stroke();}
+ ctx.globalAlpha=1;
+ // проекция
+ var P=[];for(var k=0;k<N.length;k++){var n=N[k];var x=n.bx*R,y=n.by*R,z=n.bz*R;
+  var x1=x*ca-z*sa,z1=x*sa+z*ca;var y1=y*ct-z1*stt,z2=y*stt+z1*ct;
+  P.push({k:k,sx:cx+x1*S,sy:cy-y1*S,z:z2});}
+ // связи
+ for(k=0;k<links.length;k++){var a1=P[links[k][0]],b1=P[links[k][1]];var dep=(a1.z+b1.z)/2;ctx.strokeStyle=bad?'rgba(216,90,48,':'rgba(29,158,117,';ctx.globalAlpha=1;ctx.strokeStyle+=(0.08+0.18*((dep+1.4)/2.8))+')';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(a1.sx,a1.sy);ctx.lineTo(b1.sx,b1.sy);ctx.stroke();}
+ // узлы по глубине
+ P.sort(function(p,q){return p.z-q.z;});
+ for(k=0;k<P.length;k++){var p=P[k],n=N[p.k];var dz=(p.z+1.4)/2.8;var rad=2.5+5*dz;ctx.globalAlpha=0.45+0.55*dz;ctx.fillStyle=colLv(n.lv);ctx.beginPath();ctx.arc(p.sx,p.sy,rad,0,6.283);ctx.fill();
+  if(dz>0.55){ctx.globalAlpha=Math.min(1,0.4+dz);ctx.fillStyle=uic;ctx.font=Math.round(9+3*dz)+'px system-ui';ctx.textAlign='center';ctx.fillText(n.w,p.sx,p.sy-rad-3);}}
+ ctx.globalAlpha=1;ctx.textAlign='start';}
+function render(){draw();var M=4*b*(1-b);var st,c;if(b<0.12){st='ШУМ — кристалл распылён в осколки';c='#D85A30';}else if(b>0.88){st='КОЛЛАПС — кристалл схлопнут в точку';c='#7F77DD';}else{st='ЖИВОЙ КРИСТАЛЛ — понятия держат форму';c='#1D9E75';}
+ var e=document.getElementById('mrd-st');if(e)e.innerHTML='<span class="lamp" style="background:'+c+'"></span><b style="color:'+c+'">'+st+'</b> · λ='+b.toFixed(2)+' · M(λ)='+M.toFixed(2)+' · понятий: '+N.length;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;if(auto&&!drag)A+=dt*0.35;var M=4*b*(1-b);FX.ambient(0.02*M);FX.freq(110+b*150);render();requestAnimationFrame(loop);}
+var cv=document.getElementById('mrd-c');
+cv.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;cv.style.cursor='grabbing';});
+window.addEventListener('pointermove',function(e){if(!drag)return;A+=(e.clientX-px)*0.01;tilt=Math.max(-1.3,Math.min(1.3,tilt+(e.clientY-py)*0.01));px=e.clientX;py=e.clientY;});
+window.addEventListener('pointerup',function(){drag=false;cv.style.cursor='grab';});
+function $(id){return document.getElementById(id);}
+$('mrd-rot').onclick=function(){auto=!auto;this.className='btn'+(auto?' on':'');};
+$('mrd-b').oninput=function(){b=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);requestAnimationFrame(loop);
+})();
+</script></body></html>

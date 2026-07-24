@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Алхимия смысла» (шаг 3.3, 1D)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--radius:8px;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}
+@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:780px;width:100%;color:var(--text-primary)}
+.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:300px;border:1px solid var(--border);border-radius:12px;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:12px;font-size:13px}
+.row label{display:inline-flex;align-items:center;gap:6px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:var(--radius);padding:6px 14px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}
+.lam{display:flex;align-items:center;gap:10px;margin-top:12px}
+.lam input{flex:1}
+.stat b{color:var(--text-primary);font-weight:500}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="h1">MERIDIAN — «Алхимия смысла» (шаг 3.3, 1D)</div>
+<div class="sub">конвейер несёт сырьё слева направо; рычагом λ и кликами доводи инфоны до нужного класса к выходу</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam">
+<span class="stat" style="color:var(--text-secondary)">дробление (→C0)</span>
+<input id="mrd-lambda" type="range" min="0.02" max="0.98" step="0.01" value="0.62">
+<span class="stat" style="color:var(--text-secondary)">слияние (→C5)</span>
+<span class="stat" style="min-width:70px">λ = <b id="mrd-lam">0.62</b></span>
+</div>
+<div class="row">
+<button id="mrd-play" class="btn">⏸ пауза</button>
+<button id="mrd-sound" class="btn">♪ звук</button>
+<span class="stat" style="color:var(--text-secondary)">режим клика:</span>
+<button id="mrd-tsplit" class="btn">▼ дробить</button>
+<button id="mrd-tmerge" class="btn on">▲ слить</button>
+<label>скорость <input id="mrd-speed" type="range" min="0.3" max="2.5" step="0.1" value="1"></label>
+</div>
+<div class="row">
+<span class="stat">заказ: доставить <b id="mrd-target">C3</b></span>
+<span class="stat">очки: <b id="mrd-score">0</b></span>
+<span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat">доставлено: <b id="mrd-done">0</b></span>
+<span class="stat">точность: <b id="mrd-acc">—</b></span>
+<button id="mrd-t2" class="btn">заказ C2</button>
+<button id="mrd-t3" class="btn on">C3</button>
+<button id="mrd-t4" class="btn">C4</button>
+</div>
+<div class="note">Клик по инфону применяет режим: ▼ дробит C→два C−1 (к буквам), ▲ сливает с соседом в C+1 (к смыслу). λ задаёт автоматический уклон на ленте. Файл: prototype/p3-alchemy-1d.html</div>
+</div>
+<script src="lib/mrd-fx.js"></script>
+<script>
+(function(){
+  var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+  var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+  var ctx=cvs.getContext('2d');var TAU=Math.PI*2;
+  var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+  function colOf(cls){return RAMP[5-cls];}
+  var st={playing:true,speed:1,lambda:0.62,tool:'merge',target:3};
+  var W=0,H=0,laneY=0,x0=0,x1=0,frame=0,infons=[],score=0,done=0,correct=0,hiBest=FX.best('meridian_alchemy_best');
+  var SPLIT=0.05,MERGE=0.05,RTICK=6,MERGEDIST=36,SPAWN=46;
+  function theme(){var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return d?{ui:'#E8E8EA',faint:'#3A3A3C',belt:'#55554F'}:{ui:'#2C2C2A',faint:'#E0DED7',belt:'#C4C2B8'};}
+  function resize(){var r=cvs.getBoundingClientRect();var dpr=window.devicePixelRatio||1;
+    W=r.width||680;H=r.height||300;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    laneY=H*0.52;x0=46;x1=W-58;}
+  function radOf(m){return Math.max(9,Math.min(20,9+Math.sqrt(m)*5));}
+  function spawn(){var cls=Math.random()<0.6?0:1;infons.push({x:x0,cls:cls,m:1});}
+  function react(){var L=st.lambda,i,f;
+    var add=[];
+    for(i=0;i<infons.length;i++){f=infons[i];
+      if(f.cls>0 && Math.random()<SPLIT*(1-L)){f.dead=true;
+        add.push({x:f.x-8,cls:f.cls-1,m:f.m/2});add.push({x:f.x+8,cls:f.cls-1,m:f.m/2});}}
+    var al=[];for(i=0;i<infons.length;i++)if(!infons[i].dead)al.push(infons[i]);infons=al.concat(add);
+    infons.sort(function(p,q){return p.x-q.x;});
+    for(i=0;i<infons.length-1;i++){f=infons[i];var g=infons[i+1];
+      if(!f.dead&&!g.dead&&f.cls<5&&g.cls<5&&Math.abs(g.x-f.x)<MERGEDIST&&Math.random()<MERGE*L){
+        f.dead=true;g.dead=true;infons.push({x:(f.x+g.x)/2,cls:Math.min(5,f.cls+1),m:f.m+g.m});}}
+    al=[];for(i=0;i<infons.length;i++)if(!infons[i].dead)al.push(infons[i]);infons=al;}
+  function deliver(f){done++;if(f.cls===st.target){score+=10;correct++;FX.blip(660,0.05);}else{score=Math.max(0,score-3);FX.blip(180,0.04,'sawtooth');}hiBest=FX.best('meridian_alchemy_best',score);}
+  function draw(){var t=theme();ctx.clearRect(0,0,W,H);
+    ctx.save();ctx.strokeStyle=t.belt;ctx.lineWidth=10;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x0,laneY);ctx.lineTo(x1,laneY);ctx.stroke();ctx.restore();
+    ctx.save();ctx.fillStyle=t.faint;ctx.strokeStyle=t.belt;
+    ctx.fillRect(x1,laneY-26,16,52);ctx.strokeRect(x1,laneY-26,16,52);ctx.restore();
+    ctx.fillStyle=t.ui;ctx.font='12px '+ 'system-ui';ctx.textAlign='center';
+    ctx.fillText('вход',x0,laneY+34);ctx.fillText('выход',x1+8,laneY+40);
+    var tc=colOf(st.target);ctx.fillStyle=tc;ctx.beginPath();ctx.arc(x1+8,laneY-44,13,0,TAU);ctx.fill();
+    ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,0.45)';ctx.lineWidth=3;ctx.font='bold 11px system-ui';
+    ctx.strokeText('C'+st.target,x1+8,laneY-40);ctx.fillText('C'+st.target,x1+8,laneY-40);
+    for(var k=0;k<infons.length;k++){var f=infons[k],rr=radOf(f.m);
+      ctx.fillStyle=colOf(f.cls);ctx.globalAlpha=0.95;ctx.beginPath();ctx.arc(f.x,laneY,rr,0,TAU);ctx.fill();ctx.globalAlpha=1;
+      ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=3;ctx.font='bold 11px system-ui';ctx.textAlign='center';
+      ctx.strokeText('C'+f.cls,f.x,laneY+4);ctx.fillText('C'+f.cls,f.x,laneY+4);}}
+  function stats(){var e;e=document.getElementById('mrd-lam');if(e)e.textContent=st.lambda.toFixed(2);
+    e=document.getElementById('mrd-score');if(e)e.textContent=score;
+    e=document.getElementById('mrd-best');if(e)e.textContent=Math.round(hiBest);
+    e=document.getElementById('mrd-done');if(e)e.textContent=done;
+    e=document.getElementById('mrd-acc');if(e)e.textContent=done?Math.round(correct/done*100)+'%':'—';
+    e=document.getElementById('mrd-target');if(e)e.textContent='C'+st.target;}
+  function loop(){frame++;
+    if(st.playing){var sp=0.9*st.speed,i;
+      for(i=infons.length-1;i>=0;i--){infons[i].x+=sp;if(infons[i].x>=x1){deliver(infons[i]);infons.splice(i,1);}}
+      if(frame%SPAWN===0)spawn();
+      if(frame%RTICK===0)react();}
+    draw();stats();requestAnimationFrame(loop);}
+  function $(id){return document.getElementById(id);}
+  function setTool(m){st.tool=m;var s=$('mrd-tsplit'),g=$('mrd-tmerge');
+    if(s)s.className='btn'+(m==='split'?' on':'');if(g)g.className='btn'+(m==='merge'?' on':'');}
+  function setTarget(v){st.target=v;var a={2:'mrd-t2',3:'mrd-t3',4:'mrd-t4'};for(var key in a){var el=$(a[key]);if(el)el.className='btn'+(+key===v?' on':'');}}
+  cvs.addEventListener('click',function(e){var r=cvs.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;
+    var best=-1,bd=1e9;for(var i=0;i<infons.length;i++){var dx=infons[i].x-mx,dy=laneY-my,d=dx*dx+dy*dy;if(d<bd){bd=d;best=i;}}
+    if(best<0||bd>900)return;var f=infons[best];
+    if(st.tool==='split'){if(f.cls>0){infons.splice(best,1);infons.push({x:f.x-8,cls:f.cls-1,m:f.m/2});infons.push({x:f.x+8,cls:f.cls-1,m:f.m/2});}}
+    else{var nb=-1,nd=1e9;for(var j=0;j<infons.length;j++){if(j===best)continue;var dd=Math.abs(infons[j].x-f.x);if(dd<nd){nd=dd;nb=j;}}
+      if(nb>=0&&nd<60&&f.cls<5&&infons[nb].cls<5){var g=infons[nb];var nx=(f.x+g.x)/2,nc=Math.min(5,Math.max(f.cls,g.cls)+1),nm=f.m+g.m;
+        infons=infons.filter(function(_,idx){return idx!==best&&idx!==nb;});infons.push({x:nx,cls:nc,m:nm});}}});
+  var pb=$('mrd-play');if(pb)pb.onclick=function(){st.playing=!st.playing;pb.textContent=st.playing?'⏸ пауза':'▶ играть';};
+  var sndb=$('mrd-sound');if(sndb)sndb.onclick=function(){var on=FX.toggle();sndb.textContent=on?'♪ звук вкл':'♪ звук';};
+  var lb=$('mrd-lambda');if(lb)lb.oninput=function(){st.lambda=parseFloat(lb.value);};
+  var sp=$('mrd-speed');if(sp)sp.oninput=function(){st.speed=parseFloat(sp.value);};
+  var s1=$('mrd-tsplit');if(s1)s1.onclick=function(){setTool('split');};
+  var s2=$('mrd-tmerge');if(s2)s2.onclick=function(){setTool('merge');};
+  var b2=$('mrd-t2');if(b2)b2.onclick=function(){setTarget(2);};
+  var b3=$('mrd-t3');if(b3)b3.onclick=function(){setTarget(3);};
+  var b4=$('mrd-t4');if(b4)b4.onclick=function(){setTarget(4);};
+  window.addEventListener('resize',resize);
+  resize();loop();
+})();
+</script>
+</body>
+</html>

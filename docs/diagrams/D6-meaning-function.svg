@@ -1,0 +1,30 @@
+<svg width="100%" viewBox="0 0 680 395" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Функция осмысленности M(λ)</title>
+<desc>График функции осмысленности: ноль на краях интервала, единственный максимум внутри; края — гибель смысла (шум слева, коллапс справа).</desc>
+<style>
+text{font-family:'Anthropic Sans',system-ui,'Segoe UI',Roboto,sans-serif}
+.mt{font-size:14px;fill:#2C2C2A}.mts{font-size:12px;fill:#5F5E5A}.mth{font-size:14px;font-weight:500;fill:#2C2C2A}.mttl{font-size:16px;font-weight:500;fill:#2C2C2A}
+.axis{stroke:#888780;stroke-width:1.5;fill:none}.mdash{stroke:#B4B2A9;stroke-width:1;stroke-dasharray:5 4;fill:none}
+@media (prefers-color-scheme:dark){
+.mt{fill:#E8E8EA}.mts{fill:#B4B2A9}.mth{fill:#E8E8EA}.mttl{fill:#F1EFE8}
+.axis{stroke:#B4B2A9}.mdash{stroke:#5F5E5A}
+}
+</style>
+<text class="mttl" x="40" y="30">Функция осмысленности M(λ)</text>
+<text class="mts" x="40" y="50">ноль на краях, единственный максимум внутри открытого интервала (0,1)</text>
+<rect x="90" y="70" width="34" height="260" fill="#E24B4A" opacity="0.14"/>
+<rect x="586" y="70" width="34" height="260" fill="#E24B4A" opacity="0.14"/>
+<text class="mts" x="107" y="86" text-anchor="middle">шум</text>
+<text class="mts" x="603" y="86" text-anchor="middle">коллапс</text>
+<line class="mdash" x1="355" y1="330" x2="355" y2="90"/>
+<line class="axis" x1="90" y1="330" x2="90" y2="66"/>
+<line class="axis" x1="90" y1="330" x2="624" y2="330"/>
+<path d="M90 330 L143 244 L196 176 L249 128 L302 100 L355 90 L408 100 L461 128 L514 176 L567 244 L620 330" fill="none" stroke="#7F77DD" stroke-width="2.5"/>
+<circle cx="355" cy="90" r="5" fill="#7F77DD"/>
+<text class="mth" x="355" y="80" text-anchor="middle">максимум смысла</text>
+<text class="mts" x="90" y="348" text-anchor="middle">0</text>
+<text class="mts" x="355" y="348" text-anchor="middle">0,5 = λ*</text>
+<text class="mts" x="620" y="348" text-anchor="middle">1</text>
+<text class="mts" x="355" y="372" text-anchor="middle">λ — положение рычага (дробление ← → обобщение)</text>
+<text class="mts" transform="rotate(-90 42 200)" x="42" y="200" text-anchor="middle">M(λ) — осмысленность</text>
+</svg>

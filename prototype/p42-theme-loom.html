@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Ткацкий станок тем</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-cloth{display:block;width:100%;height:360px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+#mrd-arc{display:block;width:100%;height:64px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:170px}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:220px}.bar>i{display:block;height:100%;background:#1D9E75}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-secondary);margin-top:6px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Ткацкий станок тем</div>
+<div class="sub">нити-основа = темы, каждое слово-уток пересекает свои темы. Связный текст даёт узор (живая зона); одна нить = монотон без узора (коллапс); случайный разброс без повторов = дыры/шум</div>
+<canvas id="mrd-cloth"></canvas>
+<canvas id="mrd-arc"></canvas>
+<div class="leg" id="mrd-leg"></div>
+<div class="panel"><h3>Качество ткани</h3><div id="mrd-met">—</div><div id="mrd-state" style="margin-top:4px"></div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ ткать</button><button class="btn" id="mrd-reset">↻</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="10" step="1" value="4"></label><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="row"><span style="color:var(--text-secondary)">режим:</span><span>разброс (дробить)</span>
+<input id="mrd-b" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1"><span>одна нить (обобщать)</span></div>
+<div class="note">Слева (разброс) каждое слово берёт новую случайную тему без повтора → нет вертикальных полос-узора, ткань в дырах = шум. Справа (одна нить) все слова в одной теме → монотонное полотно без узора = коллапс. В середине — несколько переплетённых нитей с повторяющимся мотивом = живой узор. Узорность = связность × разнообразие нитей. Файл: prototype/p42-theme-loom.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC=['#378ADD','#1D9E75','#EF9F27','#7F77DD','#D85A30','#639922'];
+var THN=['город','движение','свет','смысл','время','природа'];
+var N=6,COLS=18;
+var rows=[],pool=[0,1,2],lastPrim=0,run=true,b=0.5,spd=4,acc=0,last=0,maxRows=24;
+function rnd(n){return Math.floor(Math.random()*n);}
+function randTheme(){return rnd(N);}
+function randFrom(a){return a[rnd(a.length)];}
+function adjustPool(targetA){while(pool.length>targetA&&pool.length>1)pool.splice(rnd(pool.length),1);
+ var guard=0;while(pool.length<targetA&&pool.length<N&&guard++<20){var t=randTheme();if(pool.indexOf(t)<0)pool.push(t);}}
+function genRow(){var targetA=Math.max(1,Math.round(1+(N-1)*(1-b)));adjustPool(targetA);
+ var cont=b<0.5?(0.1+(0.85-0.1)*(b/0.5)):(0.85+(1-0.85)*((b-0.5)/0.5));
+ var prim;if(Math.random()<cont&&pool.indexOf(lastPrim)>=0)prim=lastPrim;else prim=randFrom(pool);
+ var ths=[prim];var pMid=0.55*(1-Math.abs(b-0.5)*2)+0.06;
+ if(pool.length>=2&&Math.random()<pMid){var sec=randFrom(pool);if(sec!==prim)ths.push(sec);}
+ lastPrim=prim;rows.push(ths);if(rows.length>maxRows)rows.shift();
+ FX.blip(330+prim*45,0.02);}
+function windowRows(){return rows.slice(Math.max(0,rows.length-10));}
+function activeThreads(){var w=windowRows(),s={};for(var i=0;i<w.length;i++)for(var j=0;j<w[i].length;j++)s[w[i][j]]=1;return Object.keys(s).length;}
+function coherence(){var w=windowRows();if(w.length<2)return 1;var sh=0,tot=0;for(var i=0;i<w.length-1;i++){tot++;var a=w[i],c=w[i+1],ov=false;for(var x=0;x<a.length;x++)if(c.indexOf(a[x])>=0){ov=true;break;}if(ov)sh++;}return tot?sh/tot:1;}
+function lam(){var A=activeThreads();return Math.max(0.02,Math.min(0.98,1-(A-1)/(N-1)));}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function cloth(){var c=document.getElementById('mrd-cloth');if(!c)return;var ctx=c.getContext('2d');var rc=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=rc.width||640,H=rc.height||360;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn();var padX=10,padY=10;var cw=(W-2*padX)/COLS;var ch=Math.min(15,(H-2*padY)/maxRows);
+ // нити основы (фон)
+ for(var cI=0;cI<COLS;cI++){var th=cI%N;ctx.globalAlpha=0.16;ctx.fillStyle=THC[th];ctx.fillRect(padX+cI*cw,padY,cw-1,maxRows*ch);}ctx.globalAlpha=1;
+ // уток (ряды слов)
+ for(var r=0;r<rows.length;r++){var ths=rows[r];for(cI=0;cI<COLS;cI++){var t=cI%N;if(ths.indexOf(t)>=0){ctx.fillStyle=THC[t];ctx.fillRect(padX+cI*cw+0.5,padY+r*ch+0.5,cw-1.5,ch-1.5);}}}
+ // линия "берда" (текущий ряд)
+ if(rows.length){ctx.strokeStyle=d?'#E8E8EA':'#2C2C2A';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(padX,padY+rows.length*ch+0.5);ctx.lineTo(W-padX,padY+rows.length*ch+0.5);ctx.stroke();}}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var w=r.width||640,h=r.height||64;c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ var x0=70,x1=w-70,y=h-17;var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-8,(x1-x0)*0.12,16);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-8,(x1-x0)*0.12,16);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-8,(x1-x0)*0.3,16);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('разброс · дыры',x0,y-11);ctx.textAlign='right';ctx.fillText('одна нить · монотон',x1,y-11);
+ var L=lam();var mx=x0+(x1-x0)*L;var coh=coherence(),A=activeThreads();var bad=(A<=1)||(coh<0.3);ctx.fillStyle=bad?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+L.toFixed(2),8,y+4);ctx.textAlign='start';}
+function legend(){var e=document.getElementById('mrd-leg');if(!e||e.childNodes.length)return;var h='';for(var i=0;i<N;i++)h+='<span><span class="sw" style="background:'+THC[i]+'"></span>'+THN[i]+'</span>';e.innerHTML=h;}
+function render(){cloth();arc();legend();var A=activeThreads(),coh=coherence();var v=A/N;
+ var Q=coh*(A>=2?1:0.12)*(A<=4?1:0.65);
+ function brow(l,val){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,val))*100)+'%"></i></span><span style="color:var(--text-muted)">'+val.toFixed(2)+'</span></div>';}
+ var e=document.getElementById('mrd-met');if(e)e.innerHTML=brow('разнообразие нитей',v)+brow('связность узора',coh)+brow('узорность ткани',Q);
+ var st;if(A<=1)st='<b style="color:#7F77DD">коллапс: одна нить — монотонное полотно без узора</b>';
+ else if(coh<0.3)st='<b style="color:#D85A30">шум: нет повторов — ткань в дырах, узор не держится</b>';
+ else st='<b style="color:#1D9E75">живой узор: переплетённые нити с мотивом</b>';
+ e=document.getElementById('mrd-state');if(e)e.innerHTML=st;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.1,(ts-last)/1000);last=ts;var L=lam();FX.ambient(0.02*4*L*(1-L));FX.freq(110+L*150);
+ if(run){acc+=dt;var iv=1/spd;while(acc>=iv){acc-=iv;genRow();}}render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ ткать':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){rows=[];pool=[0,1,2];lastPrim=0;};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-b').oninput=function(){b=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',function(){cloth();arc();});legend();requestAnimationFrame(loop);
+})();
+</script></body></html>

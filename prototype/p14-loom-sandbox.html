@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — «Алхимический Верстак»</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:430px;border:1px solid var(--border);border-radius:12px;cursor:crosshair}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — «Алхимический Верстак»</div>
+<div class="sub">рисуй λ-поле мышью: 🔥 горячая зона дробит (вниз), ❄ холодная сливает (вверх), нейтраль — равновесие. Цели нет — наблюдай каскады</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="row"><span class="stat" style="color:var(--text-secondary)">кисть:</span>
+<button class="btn" id="mrd-hot">🔥 дробить</button><button class="btn on" id="mrd-cold">❄ слить</button><button class="btn" id="mrd-neu">• нейтраль</button>
+<button class="btn" id="mrd-clear">очистить поле</button><button class="btn" id="mrd-reset">↻ инфоны</button><button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat">инфонов: <b id="mrd-n">0</b></span></div>
+<div class="note">Масса перераспределяется (слияние суммирует, дробление делит). Файл: prototype/p14-loom-sandbox.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var W=0,H=0,cols=28,rows=18,cw=0,ch=0,field=[],P=[],brush=0.85,down=false,mxp=0,myp=0,ra=0,last=0,MAX=520;
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{}:{};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||560;H=r.height||430;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cw=W/cols;ch=H/rows;}
+function clearF(){field=[];for(var i=0;i<cols*rows;i++)field[i]=0.5;}
+function reset(){P=[];for(var i=0;i<260;i++)P.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-0.5)*40,vy:(Math.random()-0.5)*40,cls:1+((Math.random()*3)|0),m:1});}
+function fAt(x,y){var c=Math.max(0,Math.min(cols-1,(x/cw)|0)),rr=Math.max(0,Math.min(rows-1,(y/ch)|0));return field[rr*cols+c];}
+function paint(x,y){var c=(x/cw)|0,rr=(y/ch)|0;for(var dy=-2;dy<=2;dy++)for(var dx=-2;dx<=2;dx++){var cc=c+dx,r2=rr+dy;if(cc<0||cc>=cols||r2<0||r2>=rows)continue;if(dx*dx+dy*dy>6)continue;field[r2*cols+cc]=brush;}}
+function react(){var n=P.length,dead={};for(var s=0;s<34;s++){var i=(Math.random()*P.length)|0,p=P[i];if(!p||dead[i])continue;var la=fAt(p.x,p.y);
+ if(la>0.62&&p.cls<5){var best=-1,bd=1e9;for(var j=0;j<P.length;j++){if(j===i||dead[j]||P[j].cls>=5)continue;var dx=P[j].x-p.x,dy=P[j].y-p.y,d=dx*dx+dy*dy;if(d<bd){bd=d;best=j;}}
+   if(best>=0&&bd<320){p.cls=Math.min(5,p.cls+1);p.m+=P[best].m;p.vx=(p.vx+P[best].vx)/2;p.vy=(p.vy+P[best].vy)/2;dead[best]=true;if(Math.random()<0.12)FX.blip(660,0.03);}}
+ else if(la<0.38&&p.cls>0&&P.length<MAX){p.cls--;p.m=p.m/2;P.push({x:p.x+(Math.random()-0.5)*8,y:p.y+(Math.random()-0.5)*8,vx:p.vx+(Math.random()-0.5)*30,vy:p.vy+(Math.random()-0.5)*30,cls:p.cls,m:p.m});if(Math.random()<0.12)FX.blip(220,0.03,'sawtooth');}}
+ var keep=[];for(var k=0;k<P.length;k++)if(!dead[k])keep.push(P[k]);P=keep;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ for(var i=0;i<P.length;i++){var p=P[i];p.x+=p.vx*dt;p.y+=p.vy*dt;
+  if(p.x<4){p.x=4;p.vx=-p.vx;}if(p.x>W-4){p.x=W-4;p.vx=-p.vx;}if(p.y<4){p.y=4;p.vy=-p.vy;}if(p.y>H-4){p.y=H-4;p.vy=-p.vy;}}
+ FX.ambient(0.015);
+ ra+=dt;if(ra>=0.08){ra=0;react();}
+ if(down)paint(mxp,myp);
+ draw();var e=document.getElementById('mrd-n');if(e)e.textContent=P.length;requestAnimationFrame(loop);}
+function draw(){ctx.clearRect(0,0,W,H);
+ for(var r=0;r<rows;r++)for(var c=0;c<cols;c++){var v=field[r*cols+c];if(Math.abs(v-0.5)<0.08)continue;
+  ctx.fillStyle=v<0.5?'#E24B4A':'#378ADD';ctx.globalAlpha=Math.min(0.22,Math.abs(v-0.5)*0.4);ctx.fillRect(c*cw,r*ch,cw+1,ch+1);}
+ ctx.globalAlpha=1;
+ for(var i=0;i<P.length;i++){var p=P[i];ctx.fillStyle=colOf(p.cls);ctx.beginPath();ctx.arc(p.x,p.y,2+Math.sqrt(p.m)*1.6,0,TAU);ctx.fill();}}
+function setB(v,id){brush=v;['mrd-hot','mrd-cold','mrd-neu'].forEach(function(x){var e=document.getElementById(x);if(e)e.className='btn'+(x===id?' on':'');});}
+cvs.addEventListener('mousedown',function(e){down=true;var r=cvs.getBoundingClientRect();mxp=e.clientX-r.left;myp=e.clientY-r.top;});
+addEventListener('mouseup',function(){down=false;});
+cvs.addEventListener('mousemove',function(e){var r=cvs.getBoundingClientRect();mxp=e.clientX-r.left;myp=e.clientY-r.top;});
+cvs.addEventListener('touchstart',function(e){down=true;var r=cvs.getBoundingClientRect();mxp=e.touches[0].clientX-r.left;myp=e.touches[0].clientY-r.top;},{passive:true});
+cvs.addEventListener('touchmove',function(e){var r=cvs.getBoundingClientRect();mxp=e.touches[0].clientX-r.left;myp=e.touches[0].clientY-r.top;},{passive:true});
+addEventListener('touchend',function(){down=false;});
+document.getElementById('mrd-hot').onclick=function(){setB(0.15,'mrd-hot');};
+document.getElementById('mrd-cold').onclick=function(){setB(0.85,'mrd-cold');};
+document.getElementById('mrd-neu').onclick=function(){setB(0.5,'mrd-neu');};
+document.getElementById('mrd-clear').onclick=clearF;document.getElementById('mrd-reset').onclick=reset;
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+addEventListener('resize',rz);rz();clearF();reset();requestAnimationFrame(loop);})();
+</script></body></html>

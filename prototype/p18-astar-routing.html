@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — A*-маршрутизация (6.1)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:560px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:450px;border:1px solid var(--border);border-radius:12px;cursor:pointer}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:13px}
+.row label{display:inline-flex;align-items:center;gap:6px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 14px;font-size:13px}
+.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — A*-маршрутизация по гибридному графу (6.1)</div>
+<div class="sub">кликни старт, затем цель — путь строится A* со штрафами «за центр» и «к границе». Выключи штрафы и сравни</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="row">
+<label><input type="checkbox" id="mrd-center" checked> штраф «за центр»</label>
+<label><input type="checkbox" id="mrd-rim" checked> штраф «к границе»</label>
+<button class="btn" id="mrd-reset">↻ сброс точек</button>
+<button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat">длина пути: <b id="mrd-cost">—</b></span></div>
+<div class="note">Штрафы загоняют путь в средние орбиты (долину устойчивости), как в 06.4: не через центр (пробка) и не по краю (вылет). Файл: prototype/p18-astar-routing.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RINGS=4,K=12,RFRAC=[0.22,0.42,0.62,0.82],W=0,H=0,cx=0,cy=0,sc=0,N=[],start=-1,goal=-1,path=[],centerOn=true,rimOn=true,anim=0,last=0;
+var CW=150,RW=150;
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA',o:'#3A3A3C',nd:'#888780'}:{ui:'#2C2C2A',o:'#E0DED7',nd:'#B4B2A9'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||520;H=r.height||450;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;sc=Math.min(W,H)/2-18;build();}
+function build(){N=[];for(var r=0;r<RINGS;r++)for(var k=0;k<K;k++){var a=k/K*TAU,R=RFRAC[r]*sc;N.push({r:r,k:k,x:cx+R*Math.cos(a),y:cy+R*Math.sin(a)});}}
+function nb(i){var r=N[i].r,k=N[i].k,res=[];res.push(r*K+((k+1)%K));res.push(r*K+((k+K-1)%K));if(r>0)res.push((r-1)*K+k);if(r<RINGS-1)res.push((r+1)*K+k);return res;}
+function dist(a,b){var dx=N[a].x-N[b].x,dy=N[a].y-N[b].y;return Math.sqrt(dx*dx+dy*dy);}
+function cost(a,b){var c=dist(a,b),rr=N[b].r;if(centerOn)c+=CW/(rr+1);if(rimOn)c+=RW/(RINGS-rr);return c;}
+function astar(s,g){var open=[s],came={},gs={};gs[s]=0;var f={};f[s]=dist(s,g);var closed={};
+ while(open.length){var bi=0;for(var i=1;i<open.length;i++)if(f[open[i]]<f[open[bi]])bi=i;var cur=open.splice(bi,1)[0];
+  if(cur===g){var p=[cur];while(came[cur]!==undefined){cur=came[cur];p.unshift(cur);}return p;}closed[cur]=1;
+  var ns=nb(cur);for(var j=0;j<ns.length;j++){var nx=ns[j];if(closed[nx])continue;var tg=gs[cur]+cost(cur,nx);
+   if(gs[nx]===undefined||tg<gs[nx]){came[nx]=cur;gs[nx]=tg;f[nx]=tg+dist(nx,g);if(open.indexOf(nx)<0)open.push(nx);}}}return [];}
+function recompute(){if(start>=0&&goal>=0){path=astar(start,goal);anim=0;if(path.length>1)FX.blip(660,0.05);else FX.blip(200,0.05,'sawtooth');}}
+function pathLen(){var s=0;for(var i=0;i<path.length-1;i++)s+=dist(path[i],path[i+1]);return s;}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.015);if(path.length>1)anim=(anim+dt*0.4)%(path.length-1);draw();
+ var e=document.getElementById('mrd-cost');if(e)e.textContent=path.length>1?Math.round(pathLen())+' px':'—';requestAnimationFrame(loop);}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);
+ ctx.strokeStyle=t.o;ctx.lineWidth=1;for(var r=0;r<RINGS;r++){ctx.beginPath();ctx.arc(cx,cy,RFRAC[r]*sc,0,TAU);ctx.stroke();}
+ ctx.setLineDash([5,5]);ctx.strokeStyle='#D85A30';ctx.globalAlpha=0.6;ctx.beginPath();ctx.arc(cx,cy,0.96*sc,0,TAU);ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([]);
+ ctx.strokeStyle=t.o;ctx.lineWidth=1;for(var i=0;i<N.length;i++){var ns=nb(i);for(var j=0;j<ns.length;j++){if(ns[j]>i){ctx.globalAlpha=0.4;ctx.beginPath();ctx.moveTo(N[i].x,N[i].y);ctx.lineTo(N[ns[j]].x,N[ns[j]].y);ctx.stroke();}}}ctx.globalAlpha=1;
+ ctx.fillStyle='#D85A30';ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('×',cx,cy);ctx.textBaseline='alphabetic';ctx.textAlign='start';
+ for(i=0;i<N.length;i++){ctx.fillStyle=t.nd;ctx.beginPath();ctx.arc(N[i].x,N[i].y,3,0,TAU);ctx.fill();}
+ if(path.length>1){ctx.strokeStyle='#1D9E75';ctx.lineWidth=4;ctx.beginPath();for(i=0;i<path.length;i++){var p=N[path[i]];if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.stroke();
+  var seg=Math.floor(anim),fr=anim-seg,a=N[path[seg]],b=N[path[seg+1]];ctx.fillStyle='#7F77DD';ctx.beginPath();ctx.arc(a.x+(b.x-a.x)*fr,a.y+(b.y-a.y)*fr,7,0,TAU);ctx.fill();}
+ if(start>=0){ctx.fillStyle='#378ADD';ctx.beginPath();ctx.arc(N[start].x,N[start].y,8,0,TAU);ctx.fill();}
+ if(goal>=0){ctx.fillStyle='#D85A30';ctx.beginPath();ctx.arc(N[goal].x,N[goal].y,8,0,TAU);ctx.fill();}}
+function pick(mx,my){var bi=-1,bd=1e9;for(var i=0;i<N.length;i++){var dx=N[i].x-mx,dy=N[i].y-my,d=dx*dx+dy*dy;if(d<bd){bd=d;bi=i;}}return bd<500?bi:-1;}
+cvs.addEventListener('click',function(e){var r=cvs.getBoundingClientRect(),i=pick(e.clientX-r.left,e.clientY-r.top);if(i<0)return;
+ if(start<0||(start>=0&&goal>=0)){start=i;goal=-1;path=[];}else{goal=i;recompute();}});
+document.getElementById('mrd-center').onchange=function(){centerOn=this.checked;recompute();};
+document.getElementById('mrd-rim').onchange=function(){rimOn=this.checked;recompute();};
+document.getElementById('mrd-reset').onclick=function(){start=-1;goal=-1;path=[];};
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+addEventListener('resize',rz);rz();requestAnimationFrame(loop);})();
+</script></body></html>

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>п79 · 1D Pulse Tape</title>
+<link rel="stylesheet" href="p79-p80-neighbor-worlds.css?v=1.0.1">
+</head>
+<body>
+<main class="tapeShell">
+  <header class="worldBar">
+    <div class="worldTitle">
+      <h1>п79 · 1D Pulse Tape</h1>
+      <p>Последовательное представление: символы → UTF-8 → binary → ритм Морзе.</p>
+    </div>
+    <nav class="worldNav" aria-label="соседние миры">
+      <a class="worldLink one active" href="p79-pulse-tape-1d.html" aria-current="page">1D · лента</a>
+      <a class="worldLink two" href="p78-living-ring-interface.html">2D · кольцо</a>
+    </nav>
+  </header>
+
+  <div class="tapeGrid">
+    <aside class="tapeInput">
+      <label for="tapeSource">входной снимок</label>
+      <textarea id="tapeSource" spellcheck="true">SOS MERIDIAN</textarea>
+      <label for="tapeProfile">профиль Морзе</label>
+      <select id="tapeProfile">
+        <option value="international-itu-r-m1677-1">International · Latin</option>
+        <option value="cyrillic-ru-v1">Кириллица · RU v1</option>
+      </select>
+      <div class="tapeActions">
+        <button id="tapeEncode" class="primary" type="button">кодировать</button>
+        <button id="tapePlay" type="button" title="пауза" aria-label="пауза">Ⅱ</button>
+        <button id="tapeReset" type="button" title="сброс" aria-label="сброс">↺</button>
+      </div>
+      <div id="tapeStatus" class="statusLine" data-status="READY">READY · локальный кодек</div>
+      <dl id="tapeProof" class="codecProof"></dl>
+    </aside>
+
+    <section class="tapeMain" aria-label="одномерная временная лента">
+      <div class="metricStrip">
+        <div><span>байты</span><b id="tapeByteCount">0</b></div>
+        <div><span>биты</span><b id="tapeBitCount">0</b></div>
+        <div><span>импульсы</span><b id="tapePulseCount">0</b></div>
+        <div><span>roundtrip</span><b id="tapeRoundtrip">—</b></div>
+      </div>
+      <div class="tapeScene">
+        <canvas id="tapeWorld" width="1280" height="360" aria-label="движущаяся лента двоичных и морзянских импульсов"></canvas>
+        <i class="tapePlayhead" aria-hidden="true"></i>
+      </div>
+      <div class="tapeOutputs">
+        <section class="outputBand">
+          <h2>UTF-8 · binary msb0</h2>
+          <pre id="tapeBinary"></pre>
+        </section>
+        <section class="outputBand morse">
+          <h2>Morse · длительности 1/3/7</h2>
+          <pre id="tapeMorse"></pre>
+        </section>
+      </div>
+    </section>
+  </div>
+</main>
+<script src="lib/p78-exchange-contract.js?v=1.0.0"></script>
+<script src="lib/p78-timeline-codec.js?v=1.0.0"></script>
+<script src="lib/p79-pulse-tape-runtime.js?v=1.0.1"></script>
+</body>
+</html>

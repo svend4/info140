@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — 3D-флагман (6.3)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:450px;border:1px solid var(--border);border-radius:12px;cursor:grab}
+.lam{display:flex;align-items:center;gap:10px;margin-top:12px}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:6px 14px;font-size:13px}
+.stat b{color:var(--text-primary);font-weight:500}
+.bar{height:9px;border-radius:5px;background:var(--border);overflow:hidden;width:130px;display:inline-block;vertical-align:middle}.bar>i{display:block;height:100%;background:#1D9E75;width:0%}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — 3D-флагман «Рычаг смысла» (6.3)</div>
+<div class="sub">объёмные оболочки + цель: держи Φ в живой зоне 60 с под нарастающим притоком; тяни мышью камеру</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam"><span class="stat" style="color:var(--text-secondary)">дробление</span>
+<input id="mrd-lambda" type="range" min="0.02" max="0.98" step="0.01" value="0.5">
+<span class="stat" style="color:var(--text-secondary)">обобщение</span>
+<span class="stat" style="min-width:64px">λ = <b id="mrd-lam">0.50</b></span></div>
+<div class="row"><button class="btn" id="mrd-play">⏸ пауза</button><button class="btn" id="mrd-reset">↻ заново</button><button id="mrd-snd" class="btn">♪ звук</button>
+<span class="stat">осталось: <b id="mrd-time">60</b>с</span><span class="stat">Φ: <span class="bar"><i id="mrd-phi"></i></span></span>
+<span class="stat">инфонов: <b id="mrd-n">0</b></span><span class="stat">очки: <b id="mrd-score">0</b></span><span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat" id="mrd-res" style="font-weight:500"></span></div>
+<div class="note">Φ = жизнь(λ) × баланс популяции (0 на полюсах). Приток усиливается — поднимай λ, но не до упора. Файл: prototype/p20-flagship-3d.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'],ORB=[0.16,0.30,0.44,0.58,0.72,0.86];
+var MIN=18,MAX=300,SPLIT=0.07,MERGE=0.07,TWIN=60;
+var st={playing:true,lambda:0.5,over:false,result:''};
+var W=0,H=0,cx=0,cy=0,Rpix=0,yaw=0.6,PITCH=0.62,inf=[],elapsed=0,score=0,last=0,racc=0,sacc=0,drag=false,lx=0,ly=0;
+var hiBest=FX.best('meridian_flagship3d_best');
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{bound:'#888780'}:{bound:'#9A9A93'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||560;H=r.height||450;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);cx=W/2;cy=H/2;Rpix=Math.min(W,H)/2-18;}
+function wOf(i){return 0.0045*Math.pow(0.86/ORB[i],1.5);}
+function dotR(m){return Math.max(2,Math.min(11,1.6+Math.sqrt(m)*1.5));}
+function reset(){inf=[];for(var i=0;i<80;i++)inf.push({lv:3,th:Math.random()*TAU,ph:(Math.random()*2-1)*1.1,m:1});elapsed=0;score=0;st.over=false;st.result='';st.playing=true;var p=document.getElementById('mrd-play');if(p)p.textContent='⏸ пауза';var rs=document.getElementById('mrd-res');if(rs)rs.textContent='';}
+function inflow(){var c=1+Math.floor(elapsed/12);for(var i=0;i<c;i++){if(inf.length>=MAX)break;inf.push({lv:5,th:Math.random()*TAU,ph:(Math.random()*2-1)*1.1,m:1});}}
+function react(){var L=st.lambda,add=[],i,f;for(i=0;i<inf.length;i++){f=inf[i];if(f.lv<5&&(inf.length+add.length)<MAX&&Math.random()<SPLIT*(1-L)){f.dead=true;add.push({lv:f.lv+1,th:f.th+0.06,ph:f.ph+0.06,m:f.m/2});add.push({lv:f.lv+1,th:f.th-0.06,ph:f.ph-0.06,m:f.m/2});}}
+ var al=[];for(i=0;i<inf.length;i++)if(!inf[i].dead)al.push(inf[i]);inf=al.concat(add);
+ var pend={},out=[],cnt=inf.length;for(i=0;i<inf.length;i++){f=inf[i];var p=pend[f.lv];if(p&&f.lv>0&&cnt>MIN&&Math.random()<MERGE*L){out.push({lv:f.lv-1,th:(f.th+p.th)/2,ph:(f.ph+p.ph)/2,m:f.m+p.m});pend[f.lv]=null;cnt-=1;if(Math.random()<0.15)FX.blip(660,0.05);}else{if(p==null)pend[f.lv]=f;else{out.push(p);pend[f.lv]=f;}}}
+ for(var lv in pend)if(pend[lv])out.push(pend[lv]);inf=out;}
+function popF(){var n=inf.length,half=(MAX-MIN)/2;return Math.max(0,Math.min(1,Math.min(n-MIN,MAX-n)/half));}
+function phi(){return 4*st.lambda*(1-st.lambda)*popF();}
+function rot(x,y,z){var cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(PITCH),sp=Math.sin(PITCH);var x1=x*cyw+z*syw,z1=-x*syw+z*cyw,y1=y;return[x1,y1*cp-z1*sp,y1*sp+z1*cp];}
+function shell(R,col,al){ctx.strokeStyle=col;ctx.globalAlpha=al;ctx.lineWidth=1.1;ctx.beginPath();for(var s=0;s<=54;s++){var t=s/54*TAU,r=rot(R*Math.cos(t),0,R*Math.sin(t));var sx=cx+r[0]*Rpix,sy=cy-r[1]*Rpix;if(s===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);}ctx.stroke();ctx.globalAlpha=1;}
+function endGame(win){st.over=true;st.playing=false;st.result=win?'Победа! Φ удержана':'Поражение: '+(inf.length>=MAX?'шум':'коллапс');if(win)FX.chord([392,494,587,784],0.07);else FX.blip(110,0.09,'sawtooth');hiBest=FX.best('meridian_flagship3d_best',score);var rs=document.getElementById('mrd-res');if(rs){rs.textContent=st.result;rs.style.color=win?'#1D9E75':'#D85A30';}}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ if(!drag)yaw+=dt*0.25;
+ if(st.playing&&!st.over){elapsed+=dt;for(var k=0;k<inf.length;k++)inf[k].th+=wOf(inf[k].lv)*dt*60;
+  racc+=dt;if(racc>=0.09){racc=0;react();}sacc+=dt;if(sacc>=0.7){sacc=0;inflow();}score+=phi()*dt*10;
+  if(inf.length>=MAX||inf.length<=MIN)endGame(false);else if(elapsed>=TWIN)endGame(true);}
+ var L=st.lambda,M=4*L*(1-L);FX.ambient(0.03*M);FX.freq(110+L*150);
+ draw();hud();requestAnimationFrame(loop);}
+function draw(){var t=th();ctx.clearRect(0,0,W,H);var n=inf.length;
+ var cong=Math.max(0,Math.min(1,(n/MAX-0.55)/0.45));ctx.setLineDash([5,5]);shell(0.95,cong>0.05?'#D85A30':t.bound,0.4+0.5*cong);ctx.setLineDash([]);
+ for(var i=0;i<6;i++)shell(ORB[i],RAMP[i],0.32);
+ var col=Math.max(0,Math.min(1,(60-n)/45));ctx.fillStyle=RAMP[0];ctx.globalAlpha=0.5+0.5*col;ctx.beginPath();ctx.arc(cx,cy,5+8*col,0,TAU);ctx.fill();ctx.globalAlpha=1;
+ var arr=[];for(var k=0;k<inf.length;k++){var f=inf[k],R=ORB[f.lv],cph=Math.cos(f.ph),r=rot(R*cph*Math.cos(f.th),R*Math.sin(f.ph),R*cph*Math.sin(f.th));arr.push({x:cx+r[0]*Rpix,y:cy-r[1]*Rpix,z:r[2],lv:f.lv,m:f.m});}
+ arr.sort(function(a,b){return a.z-b.z;});
+ for(k=0;k<arr.length;k++){var o=arr[k],d=(o.z+0.9)/1.8;d=d<0?0:(d>1?1:d);ctx.fillStyle=RAMP[o.lv];ctx.globalAlpha=0.45+0.5*d;ctx.beginPath();ctx.arc(o.x,o.y,dotR(o.m)*(0.7+0.5*d),0,TAU);ctx.fill();}ctx.globalAlpha=1;
+ if(st.over){ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 20px system-ui';ctx.fillText(st.result,cx,cy-4);ctx.font='13px system-ui';ctx.fillText('нажми «заново»',cx,cy+22);ctx.textAlign='start';}}
+function hud(){var p=phi(),e;e=document.getElementById('mrd-lam');if(e)e.textContent=st.lambda.toFixed(2);
+ e=document.getElementById('mrd-time');if(e)e.textContent=Math.max(0,Math.ceil(TWIN-elapsed));
+ e=document.getElementById('mrd-n');if(e)e.textContent=inf.length;e=document.getElementById('mrd-score');if(e)e.textContent=Math.round(score);var _be=document.getElementById('mrd-best');if(_be)_be.textContent=Math.round(hiBest);
+ e=document.getElementById('mrd-phi');if(e){e.style.width=(p*100)+'%';e.style.background=p>0.5?'#1D9E75':(p>0.25?'#EF9F27':'#D85A30');}}
+cvs.addEventListener('mousedown',function(e){drag=true;lx=e.clientX;ly=e.clientY;cvs.style.cursor='grabbing';});
+addEventListener('mouseup',function(){drag=false;cvs.style.cursor='grab';});
+addEventListener('mousemove',function(e){if(drag){yaw+=(e.clientX-lx)*0.01;PITCH=Math.max(0.1,Math.min(1.4,PITCH+(e.clientY-ly)*0.006));lx=e.clientX;ly=e.clientY;}});
+document.getElementById('mrd-play').onclick=function(){if(st.over)return;st.playing=!st.playing;this.textContent=st.playing?'⏸ пауза':'▶ играть';};
+document.getElementById('mrd-reset').onclick=reset;
+var _sb=document.getElementById('mrd-snd');if(_sb)_sb.onclick=function(){var on=FX.toggle();_sb.textContent=on?'♪ звук вкл':'♪ звук';};
+var lb=document.getElementById('mrd-lambda');lb.oninput=function(){st.lambda=parseFloat(lb.value);};
+addEventListener('resize',rz);reset();rz();requestAnimationFrame(loop);})();
+</script></body></html>

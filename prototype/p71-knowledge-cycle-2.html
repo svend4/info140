@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Цикл знаний 2.0 (честная семантика + гейт)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:150px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.panel.hot{border-color:#1D9E75;box-shadow:inset 0 0 0 1px #1D9E75}
+.txt{font-size:13.5px;line-height:1.65}.txt .new{color:#1D9E75;font-weight:600}.txt .gone{text-decoration:line-through;color:var(--text-muted)}
+.met{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--text-secondary)}.met b{color:var(--text-primary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Цикл знаний 2.0</div>
+<div class="sub">финал дорожной карты docs/16: конвейер p56 на новых деталях. Пробелы находит ЧЕСТНАЯ семантика (p69: родные по 8 признакам, но не связанные — слабые пары отбраковываются), агрегация идёт через ГЕЙТ рационализации (p70: сжатие только без потери концептов)</div>
+<canvas id="mrd-c"></canvas>
+<div class="panel" id="pn0"><h3>📕 Рассказ</h3><div class="txt" id="mrd-story">—</div></div>
+<div class="panel" id="pn1"><h3>⇑ Энциклопедия (агрегация через гейт p70)</h3><div class="txt" id="mrd-enc">—</div></div>
+<div class="panel" id="pn2"><h3>⇓ Гипотезы (пробелы по честной близости p69)</h3><div class="txt" id="mrd-hyp">—</div></div>
+<div class="panel"><h3>Метрики цикла</h3><div class="met" id="mrd-met">—</div></div>
+<div class="panel"><h3>Журнал</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ крутить цикл</button><button class="btn" id="mrd-step">этап</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label></div>
+<div class="note">Отличия от p56: (1) пробел = пара слов с градуированной близостью ≥ 0.35, НЕ встречавшаяся вместе — бессмысленные пары («шумовые мосты» старого цикла) честно пропускаются с пометкой; (2) сжатие рассказа проходит гейт I(K′)≥(1−ε)·I — обобщение, теряющее концепты, отклоняется; (3) качество каждой гипотезы = её честный косинус. Цикл замыкается, когда настоящие пробелы исчерпаны. Файл: prototype/p71-knowledge-cycle-2.html</div>
+</div><script src="lib/semantic-core.js"></script><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var CORE=window.MRDSemanticCore||null;
+var W=[
+ ['город',[1,0,.3,.2,.1,.1,.4,.2],'городу'],['мост',[.8,.2,.6,0,.1,0,.2,.15],'мосту'],
+ ['путь',[.3,.2,.9,0,.2,.3,.3,.4],'пути'],['река',[0,.9,.7,.2,.3,0,.4,.2],'реке'],
+ ['сад',[.2,1,.1,.3,.2,0,.8,.2],'саду'],['свет',[0,.2,.2,1,.1,.2,.7,.4],'свету'],
+ ['заря',[0,.5,.2,.9,.4,0,.8,.3],'заре'],['тишина',[0,.3,0,.1,.5,.4,.6,.5],'тишине'],
+ ['время',[0,.1,.4,0,1,.3,.2,.8],'времени'],['слово',[0,0,.1,.1,.1,.9,.4,.5],'слову'],
+ ['мысль',[0,0,.3,.2,.2,1,.3,.7],'мысли'],['смысл',[0,0,.1,.2,.2,1,.5,.9],'смыслу']
+].map(function(a){return {w:a[0],v:a[1],dat:a[2]};});
+var VRB=['ведёт к','питает','отражает','хранит','рождает'];
+function cosV(a,b){var d=0,na=0,nb=0;for(var i=0;i<8;i++){d+=W[a].v[i]*W[b].v[i];na+=W[a].v[i]*W[a].v[i];nb+=W[b].v[i]*W[b].v[i];}return (na&&nb)?d/Math.sqrt(na*nb):0;}
+var story,enc,hyps,cycle,stage,run=true,spd=3,acc=0,last=0,rejGate=0,weakSkip=0,eps=0.1,doneAll=false,logL=[];
+function reset(){story=[
+ {t:'город держит мост',a:0,b:1,nw:false},
+ {t:'город держит мост (повтор)',a:0,b:1,nw:false},
+ {t:'свет встречает зарю',a:5,b:6,nw:false},
+ {t:'река поит сад',a:3,b:4,nw:false},
+ {t:'мысль ищет слово',a:10,b:9,nw:false}];
+ enc=[];hyps=[];cycle=1;stage=0;rejGate=0;weakSkip=0;doneAll=false;logL=[];}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function concepts(st){var s={};for(var i=0;i<st.length;i++){if(st[i].gone)continue;s[st[i].a]=1;s[st[i].b]=1;}return Object.keys(s).map(Number);}
+function coPairs(st){var s={};for(var i=0;i<st.length;i++){if(st[i].gone)continue;var k=[st[i].a,st[i].b].sort(function(x,y){return x-y;}).join('-');s[k]=1;}return s;}
+function realGaps(){var co=coPairs(story);var g=[];
+ for(var i=0;i<W.length;i++)for(var j=i+1;j<W.length;j++){var k=i+'-'+j;if(co[k])continue;
+  var c=cosV(i,j);g.push({i:i,j:j,c:c});}
+ g.sort(function(a,b){return b.c-a.c;});return g;}
+function doStage(){
+ if(stage===0){ // ⇑ агрегация через гейт
+  var I0=concepts(story).length;var acted=false;
+  // дубль
+  var seen={},di=-1;
+  for(var i=0;i<story.length;i++){if(story[i].gone)continue;var k=[story[i].a,story[i].b].sort().join('-');
+   if(seen[k]!=null){di=i;break;}seen[k]=i;}
+  if(di>=0){story[di].gone=true;
+   addLog('⚗ агрегация: дубль «'+story[di].t+'» свёрнут — ΔI=0, гейт доволен');acted=true;FX.blip(420,0.04);}
+  else{ // попытка агрессивного обобщения: свернуть две фразы в одну (теряет 2 концепта)
+   var av=story.filter(function(p){return !p.gone;});
+   if(av.length>=4){var A=av[av.length-1],B=av[av.length-2];
+    var newC=I0-2;
+    if(newC<(1-eps)*I0){rejGate++;
+     addLog('✋ <b>гейт p70 отклонил</b> обобщение «'+A.t+'»+«'+B.t+'»: потеря 2 концептов → I '+Math.round(newC/I0*100)+'% < '+(Math.round((1-eps)*100))+'%');}
+    else addLog('⚗ обобщение прошло бы гейт (ε велик)');
+    acted=true;}}
+  enc=[];var cn=concepts(story);
+  enc.push('покрыто концептов: '+cn.length+' — '+cn.slice(0,8).map(function(i){return W[i].w;}).join(', ')+(cn.length>8?'…':''));
+  if(!acted)addLog('агрегация: сжимать нечего — текст уже рационален');}
+ else if(stage===1){ // ⇓ гипотезы по честной близости
+  hyps=[];var g=realGaps();
+  var strong=g.filter(function(x){return x.c>=0.35;});
+  var weak=g.length-strong.length;
+  if(strong.length){var top=strong[0];
+   var t=W[top.i].w+' '+VRB[(cycle+top.i)%VRB.length]+' '+W[top.j].dat;
+   hyps.push({t:t,i:top.i,j:top.j,c:top.c});
+   addLog('💡 честный пробел: «'+W[top.i].w+'»+«'+W[top.j].w+'» близки (cos '+top.c.toFixed(2)+'), но не связаны → гипотеза «<b>'+t+'</b>»');
+   if(weak>0&&Math.random()<0.5){weakSkip++;addLog('🚫 слабых пар пропущено: '+weak+' (cos<0.35 — старый цикл p56 связал бы и их)');}
+   FX.chord([523,659],0.05);}
+  else {doneAll=true;
+   addLog('✓ <b>настоящих пробелов больше нет</b> — все родные пары связаны, слабые честно отклонены. Цикл замкнут');FX.chord([523,659,784,1047],0.08);}}
+ else { // ↔ замыкание
+  for(var h=0;h<hyps.length;h++){story.push({t:hyps[h].t,a:hyps[h].i,b:hyps[h].j,nw:true,cy:cycle});}
+  if(hyps.length)cycle++;
+  var live=story.filter(function(p){return !p.gone;});
+  if(live.length>12){for(i=0;i<story.length;i++){if(!story[i].gone&&!story[i].nw){story[i].gone=true;break;}}}}
+ stage=(stage+1)%3;}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var Wd=r.width||640,H=r.height||150;c.width=Wd*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,Wd,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ var nodes=[['⇑ агрегация','через гейт p70'],['⇓ гипотезы','честная близость p69'],['↔ замыкание','гипотезы в рассказ']];
+ var cx=Wd/2,cy=H/2,Rx=Wd*0.34,Ry=H*0.26;
+ ctx.strokeStyle=d?'#3a3a3f':'#dad8ce';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(cx,cy,Rx,Ry,0,0,6.283);ctx.stroke();
+ for(var i=0;i<3;i++){var a=-Math.PI/2+i*Math.PI*2/3;var x=cx+Math.cos(a)*Rx,y=cy+Math.sin(a)*Ry;
+  var hot=(i===stage)&&!doneAll;
+  ctx.fillStyle=hot?'#1D9E75':(d?'#26262B':'#fff');ctx.strokeStyle=hot?'#1D9E75':(d?'#444441':'#D3D1C7');ctx.lineWidth=1.5;
+  var bw=170,bh=38;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x-bw/2,y-bh/2,bw,bh,9);else ctx.rect(x-bw/2,y-bh/2,bw,bh);ctx.fill();ctx.stroke();
+  ctx.fillStyle=hot?'#fff':uic;ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.fillText(nodes[i][0],x,y-3);
+  ctx.fillStyle=hot?'rgba(255,255,255,0.85)':(d?'#888780':'#9A9A93');ctx.font='9.5px system-ui';ctx.fillText(nodes[i][1],x,y+11);}
+ ctx.fillStyle=doneAll?'#1D9E75':uic;ctx.font='600 12px system-ui';ctx.textAlign='center';
+ ctx.fillText(doneAll?'✓ замкнут':'цикл '+cycle,cx,cy+4);ctx.textAlign='start';}
+function render(){draw();
+ ['pn0','pn1','pn2'].forEach(function(id,i){var e=document.getElementById(id);if(e)e.className='panel'+((i===(stage+2)%3+0)&&false?' hot':'');});
+ document.getElementById('pn1').className='panel'+(stage===0&&!doneAll?' hot':'');
+ document.getElementById('pn2').className='panel'+(stage===1&&!doneAll?' hot':'');
+ document.getElementById('pn0').className='panel'+(stage===2&&!doneAll?' hot':'');
+ var e=document.getElementById('mrd-story');if(e){var h='';for(var i=0;i<story.length;i++){var p=story[i];
+  h+='<div class="'+(p.gone?'gone':'')+'">'+(p.nw?'<span class="new">🆕 ц'+p.cy+' · </span>':'• ')+p.t+(p.nw?' <span style="color:var(--text-muted)">(cos '+cosV(p.a,p.b).toFixed(2)+')</span>':'')+'</div>';}e.innerHTML=h;}
+ e=document.getElementById('mrd-enc');if(e)e.innerHTML=enc.length?enc.map(function(s){return '<div>• '+s+'</div>';}).join(''):'<span style="color:var(--text-muted)">—</span>';
+ e=document.getElementById('mrd-hyp');if(e){var h2='';for(i=0;i<hyps.length;i++)h2+='<div>💡 <b>«'+hyps[i].t+'»</b> — качество '+hyps[i].c.toFixed(2)+'</div>';
+  if(doneAll)h2='<div style="color:#1D9E75;font-weight:600">✓ настоящие пробелы исчерпаны — цикл замкнут честно</div>';
+  e.innerHTML=h2||'<span style="color:var(--text-muted)">—</span>';}
+ var g=realGaps();var strong=g.filter(function(x){return x.c>=0.35;}).length;
+ var live=story.filter(function(p){return !p.gone;}).length;
+ e=document.getElementById('mrd-met');if(e)e.innerHTML='<span>цикл <b>'+cycle+'</b></span><span>фраз <b>'+live+'</b></span><span>наст. пробелов осталось <b>'+strong+'</b></span><span>отклонено гейтом <b>'+rejGate+'</b></span><span>слабых пропущено <b>'+weakSkip+'</b></span>';
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.012);
+ if(run&&!doneAll){acc+=dt;var iv=1.8-spd*0.22;if(acc>=iv){acc=0;doStage();}}
+ render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ крутить цикл':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-step').onclick=function(){run=false;$('mrd-run').textContent='▶ крутить цикл';$('mrd-run').className='btn';if(!doneAll)doStage();};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

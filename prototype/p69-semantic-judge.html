@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Семантический судья 2.0 (честная близость)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{cursor:pointer;padding:3px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface-2);font-size:12.5px}
+.chip.a{border-color:#378ADD;color:#378ADD;font-weight:600}.chip.b{border-color:#EF9F27;color:#EF9F27;font-weight:600}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.jc{flex:1;min-width:170px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.jc .nm{font-size:12px;color:var(--text-secondary);font-weight:500}.jc .sc{font-size:26px;font-weight:600;margin:2px 0}
+.jc .vd{font-size:12px;color:var(--text-secondary);min-height:28px}
+.jc.new{border-color:#1D9E75}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+#mrd-sc{display:block;width:100%;height:220px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.dim{display:flex;align-items:center;gap:8px;margin:2px 0;font-size:12px}.dim .w{min-width:120px;color:var(--text-secondary)}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:220px}.bar>i{display:block;height:100%;background:#1D9E75}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Семантический судья 2.0</div>
+<div class="sub">лечим дыру из docs/12 §10 и docs/16: старый тег-косинус квантован в 4 значения и даёт фальшивую связность. Новый оффлайн-судья — 8-мерные градуированные векторы признаков; внешние эмбеддинги подключаются опционально (паттерн деградации p34). Выберите пару слов: синее — А, оранжевое — Б</div>
+<div class="chips" id="mrd-words"></div>
+<div class="cards">
+ <div class="jc"><div class="nm">① Тег-косинус (старый, p32)</div><div class="sc" id="mrd-s1">—</div><div class="vd" id="mrd-v1">бинарные теги · {0, .5, .71, 1}</div></div>
+ <div class="jc new"><div class="nm">② Градуированный косинус (новый)</div><div class="sc" id="mrd-s2">—</div><div class="vd" id="mrd-v2">8 признаков · непрерывный</div></div>
+ <div class="jc"><div class="nm">③ Внешние эмбеддинги (опц.)</div><div class="sc" id="mrd-s3">—</div><div class="vd" id="mrd-v3">llm_adapter.embed из infom; в чате/офлайн недоступно — фолбэк ②</div></div>
+</div>
+<div class="panel"><h3>Почему ② так решил (вклад признаков пары)</h3><div id="mrd-dims">—</div><div id="mrd-verd" style="margin-top:6px"></div></div>
+<canvas id="mrd-sc"></canvas>
+<div class="row"><button class="btn" id="mrd-demo1">пример: слепота ① («тишина»+«сад»)</button><button class="btn" id="mrd-demo2">пример: фальшь ① («шум»+«смысл»)</button></div>
+<div class="note">График: все 136 пар словаря; x = старый судья ① (сжимается в 4 столбца — квантование), y = новый ② (непрерывное облако). Зелёные точки — пары, где ① и ② согласны; красные — где расходятся &gt;0.3 (слепота или фальшь старого). Признаки: город·природа·движение·свет·время·мысль·теплота·абстрактность. Файл: prototype/p69-semantic-judge.html</div>
+</div><script src="lib/semantic-core.js"></script><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var CORE=window.MRDSemanticCore||null;
+var DIMN=['город','природа','движение','свет','время','мысль','теплота','абстрактность'];
+// [слово, теги(старые), 8-мерный вектор]
+var W=[
+ ['город','г',[1,0,.3,.2,.1,.1,.4,.2]],
+ ['улица','гд',[.9,0,.5,.2,0,0,.3,.1]],
+ ['мост','гд',[.8,.2,.6,0,.1,0,.2,.15]],
+ ['поезд','гд',[.7,0,1,.1,0,0,.3,.1]],
+ ['путь','дм',[.3,.2,.9,0,.2,.3,.3,.4]],
+ ['река','пд',[0,.9,.7,.2,.3,0,.4,.2]],
+ ['сад','п',[.2,1,.1,.3,.2,0,.8,.2]],
+ ['лист','п',[0,.9,.2,.2,.1,0,.5,.1]],
+ ['свет','с',[0,.2,.2,1,.1,.2,.7,.4]],
+ ['заря','сп',[0,.5,.2,.9,.4,0,.8,.3]],
+ ['огонь','с',[0,.2,.4,.9,0,0,.9,.2]],
+ ['тишина','в',[0,.3,0,.1,.5,.4,.6,.5]],
+ ['время','в',[0,.1,.4,0,1,.3,.2,.8]],
+ ['слово','м',[0,0,.1,.1,.1,.9,.4,.5]],
+ ['мысль','мв',[0,0,.3,.2,.2,1,.3,.7]],
+ ['смысл','м',[0,0,.1,.2,.2,1,.5,.9]],
+ ['шум','м',[.3,0,.5,0,.1,.2,.1,.3]]
+].map(function(a){return {w:a[0],tg:a[1].split(''),v:a[2]};});
+function cosTag(a,b){var sh=0;for(var i=0;i<a.tg.length;i++)if(b.tg.indexOf(a.tg[i])>=0)sh++;return a.tg.length&&b.tg.length?sh/Math.sqrt(a.tg.length*b.tg.length):0;}
+function cosVec(a,b){var d=0,na=0,nb=0;for(var i=0;i<8;i++){d+=a.v[i]*b.v[i];na+=a.v[i]*a.v[i];nb+=b.v[i]*b.v[i];}return (na&&nb)?d/Math.sqrt(na*nb):0;}
+var ai=11,bi=6; // тишина + сад по умолчанию
+function colS(v){return v>0.6?'#1D9E75':v>0.3?'#EF9F27':'#D85A30';}
+function $(id){return document.getElementById(id);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function scatter(){var c=$('mrd-sc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var Wd=r.width||640,H=r.height||220;c.width=Wd*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,Wd,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var x0=44,x1=Wd-16,y0=16,y1=H-30;
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;
+ ctx.beginPath();ctx.moveTo(x0,y1);ctx.lineTo(x1,y1);ctx.moveTo(x0,y0);ctx.lineTo(x0,y1);ctx.stroke();
+ ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x0,y1-(y1-y0));ctx.lineTo(x1,y1-(y1-y0));ctx.stroke();ctx.setLineDash([]);
+ for(var i=0;i<W.length;i++)for(var j=i+1;j<W.length;j++){var s1=cosTag(W[i],W[j]),s2=cosVec(W[i],W[j]);
+  var px=x0+s1*(x1-x0),py=y1-s2*(y1-y0);var dis=Math.abs(s1-s2)>0.3;
+  var cur=(i===ai&&j===bi)||(i===bi&&j===ai);
+  ctx.globalAlpha=cur?1:0.55;ctx.fillStyle=cur?'#378ADD':(dis?'#D85A30':'#1D9E75');
+  ctx.beginPath();ctx.arc(px,py,cur?6:3,0,6.283);ctx.fill();ctx.globalAlpha=1;}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';
+ ctx.fillText('x = старый ① (4 столбца — квантование!)',x0,H-8);
+ ctx.save();ctx.translate(12,y1);ctx.rotate(-Math.PI/2);ctx.fillText('y = новый ② (непрерывно)',0,0);ctx.restore();
+ ctx.textAlign='right';ctx.fillStyle='#D85A30';ctx.fillText('красное = ① ошибается на >0.3',Wd-10,y0+10);ctx.textAlign='start';}
+function render(){var A=W[ai],B=W[bi];
+ var s1=cosTag(A,B),s2=cosVec(A,B);
+ $('mrd-s1').textContent=s1.toFixed(2);$('mrd-s1').style.color=colS(s1);
+ $('mrd-s2').textContent=s2.toFixed(2);$('mrd-s2').style.color=colS(s2);
+ $('mrd-s3').textContent='—';
+ // вклад признаков
+ var contr=[];for(var i=0;i<8;i++)contr.push([DIMN[i],A.v[i]*B.v[i],A.v[i],B.v[i]]);
+ contr.sort(function(a,b){return b[1]-a[1];});
+ var h='';for(i=0;i<4;i++){var c=contr[i];
+  h+='<div class="dim"><span class="w">'+c[0]+'</span><span class="bar"><i style="width:'+Math.round(Math.min(1,c[1])*100)+'%"></i></span><span style="color:var(--text-muted)">A '+c[2].toFixed(1)+' · Б '+c[3].toFixed(1)+'</span></div>';}
+ $('mrd-dims').innerHTML=h;
+ var dif=s2-s1;var vd;
+ if(dif>0.3)vd='<b style="color:#1D9E75">слепота старого судьи</b>: теги не пересекаются (①='+s1.toFixed(2)+'), но признаки видят родство (②='+s2.toFixed(2)+')';
+ else if(dif<-0.3)vd='<b style="color:#D85A30">фальшь старого судьи</b>: общий тег даёт ①='+s1.toFixed(2)+', но по признакам слова далеки (②='+s2.toFixed(2)+') — фальшивая связность разоблачена';
+ else vd='судьи согласны (расхождение '+Math.abs(dif).toFixed(2)+')';
+ $('mrd-verd').innerHTML='«<b>'+A.w+'</b>» + «<b>'+B.w+'</b>»: '+vd;
+ scatter();FX.blip(300+s2*400,0.03);}
+var box=$('mrd-words');
+for(var i=0;i<W.length;i++){(function(k){var ch=document.createElement('span');ch.className='chip';ch.textContent=W[k].w;
+ ch.onclick=function(){ai=bi;bi=k;refresh();};box.appendChild(ch);})(i);}
+function refresh(){var chs=box.children;for(var j=0;j<chs.length;j++)chs[j].className='chip'+(j===ai?' a':j===bi?' b':'');render();}
+$('mrd-demo1').onclick=function(){ai=11;bi=6;refresh();};
+$('mrd-demo2').onclick=function(){ai=16;bi=15;refresh();};
+window.addEventListener('resize',scatter);refresh();
+})();
+</script></body></html>

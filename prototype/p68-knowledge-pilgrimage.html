@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Паломничество знаний (7 кругов смысла)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:400px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.book{font-size:13.5px;line-height:1.7}.book b{font-weight:600}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Паломничество знаний</div>
+<div class="sub">геометрия, вдохновлённая видом тавафа сверху: куб-ядро в центре (трёхмерная статика полного обобщения — остаться нельзя), внешняя орбита (одномерный вылет дробления — тоже нельзя). Между ними — 7 осмысленных кругов по спирали: смайлики-пилигримы синтезируют (шаг внутрь), уточняют со ссылками (шаг наружу), цитируют энциклопедию — и записывают путь в Книгу</div>
+<canvas id="mrd-c"></canvas>
+<div class="hud"><span>пилигримов <b id="mrd-n">0</b></span><span>кругов пройдено <b id="mrd-circ">0</b></span><span>синтезов ⇑ <b id="mrd-syn">0</b></span><span>уточнений ⇓ <b id="mrd-det">0</b></span><span>работ в Книге <b id="mrd-bk">0</b></span></div>
+<div class="panel"><h3>📜 Книга паломничества (завершённые работы — «диссертации»)</h3><div class="book" id="mrd-book">—</div></div>
+<div class="panel"><h3>Хроника обхода (молитва смыслом)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ обход идёт</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label></div>
+<div class="note">Два правила системы (из перечитывания p4/p5/p6/p21): нельзя постоянно обобщать (куб) и нельзя постоянно дробить (вылет). Пилигрим у куба принудительно возвращается на орбиту, пилигрим у края обязан искать синтез. 7 полных кругов → работа записывается: тема → цепь синтезов-гиперонимов + собранные ссылки. Реальную Википедию сюда подключает GraphRAG из infom (см. docs/16). Файл: prototype/p68-knowledge-pilgrimage.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var TAU=Math.PI*2;
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var TN={'г':'город','д':'движение','с':'свет','м':'смысл','в':'время','п':'природа'};
+var GEN={'г':'место','д':'процесс','с':'энергия','м':'идея','в':'длительность','п':'живое'};
+var WIKI={'г':'«Город — крупный населённый пункт…»','д':'«Движение — изменение положения во времени…»','с':'«Свет — видимое электромагнитное излучение…»','м':'«Смысл — внутреннее содержание, значение…»','в':'«Время — форма протекания процессов…»','п':'«Природа — материальный мир Вселенной…»'};
+var THS=['г','д','с','м','в','п'];
+var ORB=[0.34,0.52,0.7,0.88];
+var P=[],book=[],logL=[],id=1,run=true,spd=3,acc=0,last=0,circTot=0,synTot=0,detTot=0;
+function spawn(){var th=THS[Math.floor(Math.random()*6)];
+ P.push({id:id++,th:th,orb:1+Math.floor(Math.random()*2),ang:Math.random()*TAU,acc:0,circ:0,chain:[TN[th]],refs:0,syn:0,mood:'walk',mt:0});}
+function reset(){P=[];book=[];logL=[];id=1;circTot=0;synTot=0;detTot=0;for(var i=0;i<12;i++)spawn();}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function beat(){var done={};
+ for(var i=0;i<P.length;i++){var p=P[i];if(done[p.id])continue;
+  // правило 1: у куба нельзя остаться
+  if(p.orb===0){p.orb=1;p.mood='surprised';p.mt=1;
+   addLog('◼ №'+p.id+': у ядра нельзя остаться — возвращён на орбиту (правило против вечного обобщения)');continue;}
+  // поиск соседа той же темы на своей орбите
+  var mate=null;
+  for(var j=0;j<P.length;j++){var q=P[j];if(q===p||done[q.id]||q.orb!==p.orb)continue;
+   var da=Math.abs(q.ang-p.ang)%TAU;da=Math.min(da,TAU-da);
+   if(da<0.5&&q.th===p.th){mate=q;break;}}
+  if(mate&&Math.random()<0.65){ // синтез ⇑
+   done[p.id]=done[mate.id]=true;synTot++;p.syn++;mate.syn++;
+   var g=GEN[p.th];p.chain.push(g);mate.chain.push(g);
+   p.orb=Math.max(0,p.orb-1);mate.orb=Math.max(0,mate.orb-1);
+   p.mood=mate.mood='talk';p.mt=mate.mt=1;
+   addLog('⇑ №'+p.id+'+№'+mate.id+' (тема «'+TN[p.th]+'»): синтез → «<b>'+g+'</b>» — шаг к ядру. '+(Math.random()<0.5?'Цит.: '+WIKI[p.th]:''));
+   FX.chord([392,523],0.05);}
+  else if(p.orb===3){ // правило 2: у края вылет запрещён
+   done[p.id]=true;p.orb=2;p.mood='frazzled';p.mt=1;
+   if(Math.random()<0.4)addLog('⚠ №'+p.id+': край орбиты — вылет запрещён, ищет синтез (правило против вечного дробления)');}
+  else if(Math.random()<0.35){ // уточнение ⇓
+   done[p.id]=true;detTot++;p.refs++;p.orb=Math.min(3,p.orb+1);
+   p.chain.push('↘'+TN[p.th]);p.mood='talk';p.mt=1;
+   if(Math.random()<0.5)addLog('⇓ №'+p.id+' уточняет «'+TN[p.th]+'»: добавлена ссылка №'+p.refs+' — шаг наружу');
+   FX.blip(330,0.03);}}}
+function finish(p){book.unshift({id:p.id,th:p.th,chain:p.chain.slice(-4),syn:p.syn,refs:p.refs});
+ if(book.length>4)book.pop();
+ addLog('📜 <b>№'+p.id+'</b> завершил 7 кругов — работа записана в Книгу: '+p.chain.slice(-3).join(' → '));
+ FX.chord([523,659,784,1047],0.08);
+ var idx=P.indexOf(p);if(idx>=0)P.splice(idx,1);spawn();}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function face(ctx,x,y,r,col,mood){ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+ var ex=r*0.34,ey=-r*0.2,er=Math.max(0.8,r*0.11);ctx.fillStyle='#241c10';
+ var es=(mood==='frazzled'||mood==='surprised')?er*1.4:er;
+ ctx.beginPath();ctx.arc(x-ex,y+ey,es,0,TAU);ctx.arc(x+ex,y+ey,es,0,TAU);ctx.fill();
+ ctx.strokeStyle='#241c10';ctx.lineWidth=Math.max(1,r*0.12);
+ if(mood==='talk'){ctx.fillStyle='#241c10';ctx.beginPath();ctx.ellipse(x,y+r*0.3,r*0.2,r*0.15,0,0,TAU);ctx.fill();}
+ else if(mood==='frazzled'){ctx.beginPath();ctx.arc(x,y+r*0.5,r*0.32,1.2*Math.PI,1.8*Math.PI);ctx.stroke();}
+ else if(mood==='surprised'){ctx.fillStyle='#241c10';ctx.beginPath();ctx.arc(x,y+r*0.28,r*0.16,0,TAU);ctx.fill();}
+ else {ctx.beginPath();ctx.arc(x,y+r*0.05,r*0.4,0.2*Math.PI,0.8*Math.PI);ctx.stroke();}}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||400;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-24;
+ // орбиты
+ for(var o=0;o<4;o++){ctx.strokeStyle=d?'#33333a':'#e6e4da';ctx.lineWidth=o===3?1.6:1;ctx.beginPath();ctx.arc(cx,cy,ORB[o]*R,0,TAU);ctx.stroke();}
+ ctx.strokeStyle='#D85A30';ctx.globalAlpha=0.35;ctx.setLineDash([4,5]);ctx.beginPath();ctx.arc(cx,cy,0.97*R,0,TAU);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+ // куб-ядро (изометрия)
+ var s=R*0.16;
+ ctx.fillStyle=d?'#2b2b31':'#3a3a40';ctx.strokeStyle=d?'#555':'#222';ctx.lineWidth=1.2;
+ ctx.beginPath();ctx.moveTo(cx-s,cy-s*0.4);ctx.lineTo(cx,cy-s*0.9);ctx.lineTo(cx+s,cy-s*0.4);ctx.lineTo(cx+s,cy+s*0.5);ctx.lineTo(cx,cy+s);ctx.lineTo(cx-s,cy+s*0.5);ctx.closePath();ctx.fill();ctx.stroke();
+ ctx.beginPath();ctx.moveTo(cx-s,cy-s*0.4);ctx.lineTo(cx,cy+s*0.1);ctx.lineTo(cx+s,cy-s*0.4);ctx.moveTo(cx,cy+s*0.1);ctx.lineTo(cx,cy+s);ctx.stroke();
+ ctx.fillStyle='#fff';ctx.font='600 10px system-ui';ctx.textAlign='center';ctx.fillText('ЯДРО',cx,cy+s*0.55);
+ // пилигримы
+ for(var i=0;i<P.length;i++){var p=P[i];var rr=ORB[p.orb]*R;
+  var x=cx+Math.cos(p.ang)*rr,y=cy+Math.sin(p.ang)*rr;
+  face(ctx,x,y,9,THC[p.th],p.mood);
+  ctx.fillStyle=d?'#888780':'#9A9A93';ctx.font='8px system-ui';ctx.textAlign='center';ctx.fillText(p.circ+'/7',x,y+17);}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('вид сверху · спираль между ядром и краем',10,16);
+ ctx.textAlign='right';ctx.fillStyle='#D85A30';ctx.fillText('пунктир = вылет (запрещён)',W-10,16);ctx.textAlign='start';}
+function render(){draw();
+ document.getElementById('mrd-n').textContent=P.length;
+ document.getElementById('mrd-circ').textContent=circTot;
+ document.getElementById('mrd-syn').textContent=synTot;
+ document.getElementById('mrd-det').textContent=detTot;
+ document.getElementById('mrd-bk').textContent=book.length;
+ var e=document.getElementById('mrd-book');if(e){var h='';for(var i=0;i<book.length;i++){var b=book[i];
+  h+='<div>📜 <b>№'+b.id+'</b> (тема «'+TN[b.th]+'»): 7 кругов · синтезов '+b.syn+' · ссылок '+b.refs+' · путь: <b>'+b.chain.join(' → ')+'</b></div>';}
+  e.innerHTML=h||'<span style="color:var(--text-muted)">первые работы ещё в пути (нужно 7 кругов)…</span>';}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var s=0;for(var i=0;i<P.length;i++)s+=P[i].orb;var lam=P.length?1-(s/P.length)/3:0.5;FX.ambient(0.014*4*lam*(1-lam)+0.008);
+ if(run){for(i=0;i<P.length;i++){var p=P[i];var w=dt*(0.5-p.orb*0.07)*(0.6+spd*0.13);
+   p.ang+=w;p.acc+=w;if(p.mt>0)p.mt-=dt;else p.mood='walk';
+   if(p.acc>=TAU){p.acc=0;p.circ++;circTot++;FX.blip(300+p.circ*40,0.04);
+    if(p.circ>=7){finish(p);continue;}}}
+  acc+=dt;var iv=1.4-spd*0.17;if(acc>=iv){acc=0;beat();}}
+ render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ обход идёт':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Реактор слов (слияние/деление)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-box{display:block;width:100%;height:360px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);touch-action:none}
+#mrd-arc{display:block;width:100%;height:64px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:170px}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:220px}.bar>i{display:block;height:100%;background:#1D9E75}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Реактор слов</div>
+<div class="sub">слова как инфоны. ⚛ Слияние двух слов → вверх к обобщению; ✂ деление слова → вниз к дроблению (до букв). Масса сохраняется. Перебор к слиянию = коллапс «нечто», к делению = шум из букв, баланс = живая зона</div>
+<canvas id="mrd-box"></canvas>
+<canvas id="mrd-arc"></canvas>
+<div class="panel"><h3>Состояние реактора</h3><div id="mrd-st">—</div></div>
+<div class="panel"><h3>Закон сохранения</h3><div id="mrd-cons">—</div></div>
+<div class="row">
+<button class="btn" id="mrd-fuse">⚛ слить</button><button class="btn" id="mrd-fis">✂ делить</button>
+<button class="btn on" id="mrd-auto">▶ авто</button><button class="btn on" id="mrd-homeo">⟳ гомеостат</button><button class="btn" id="mrd-reset">↻</button>
+<button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="row"><span style="color:var(--text-secondary)">режим:</span><span>деление (дробить)</span>
+<input id="mrd-bias" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1"><span>слияние (обобщать)</span></div>
+<div class="note">Клик по слову — выбрать; клик по второму — слить их (одна тема → плавно вверх, разные темы → быстрее к «нечто»). «✂ делить» дробит выбранное (lv−1; на самом дне слово рассыпается на буквы = шум). Гомеостат подстраивает слияние/деление, удерживая популяцию в живой зоне. Масса (∑) сохраняется при любой реакции. Файл: prototype/p41-word-reactor.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+var WORDLAD={'г':['дом','улица','город','поселение','место'],'д':['шаг','путь','поток','движение','процесс'],'с':['искра','луч','свет','сияние','энергия'],'м':['буква','слово','мысль','идея','смысл'],'в':['миг','час','время','эпоха','вечность'],'п':['семя','лист','ветвь','дерево','природа']};
+var THS=['г','д','с','м','в','п'];
+function lw(th,lv){if(lv>=5)return 'нечто';if(lv<0)return '·';var arr=WORDLAD[th]||WORDLAD['м'];return arr[Math.max(0,Math.min(4,Math.round(lv)))];}
+var P=[],sel=null,auto=true,homeo=true,bias=0.5,run=true,acc=0,last=0,Mtotal=0,W=640,Hc=360;
+function spawn(x,y,th,lv,mass,w,vx,vy){var m=mass||1;var p={x:x,y:y,vx:vx||(Math.random()*60-30),vy:vy||(Math.random()*60-30),th:th,lv:lv,mass:m,w:w||lw(th,lv),flash:0};P.push(p);return p;}
+function reset(){P=[];sel=null;for(var i=0;i<8;i++){var th=THS[Math.floor(Math.random()*THS.length)];var lv=1+Math.floor(Math.random()*2);spawn(60+Math.random()*(W-120),40+Math.random()*(Hc-80),th,lv,1);}Mtotal=P.length;}
+function rad(p){return 9+Math.sqrt(p.mass)*6;}
+function fuse(a,b){if(!a||!b||a===b)return;var i=P.indexOf(a),j=P.indexOf(b);if(i<0||j<0)return;
+ var same=a.th===b.th;var lv=Math.max(a.lv,b.lv)+(same?1:2);var th=same?a.th:(a.mass>=b.mass?a.th:b.th);
+ var c=spawn((a.x+b.x)/2,(a.y+b.y)/2,th,lv,a.mass+b.mass,lw(th,lv),(a.vx+b.vx)/2,(a.vy+b.vy)/2);c.flash=1;
+ P.splice(P.indexOf(b),1);P.splice(P.indexOf(a),1);if(sel===a||sel===b)sel=null;FX.chord([330,440],0.04);}
+function fis(a){if(!a)return;var i=P.indexOf(a);if(i<0)return;
+ if(a.lv-1<0){var ls=a.w.split('');P.splice(i,1);if(sel===a)sel=null;var n=Math.max(1,ls.length);for(var k=0;k<n;k++){var ang=Math.random()*6.28;spawn(a.x,a.y,a.th,0,a.mass/n,ls[k],Math.cos(ang)*70,Math.sin(ang)*70).flash=1;}FX.blip(140,0.04,'sawtooth');return;}
+ var lv=a.lv-1;P.splice(i,1);if(sel===a)sel=null;for(var s=0;s<2;s++){var ang2=(s?1:-1)*0.8;var p=spawn(a.x,a.y,a.th,lv,a.mass/2,lw(a.th,lv),Math.cos(ang2)*60,Math.sin(ang2)*60);p.flash=1;}FX.blip(300,0.04,'sine');}
+function avgLv(){if(!P.length)return 2.5;var s=0;for(var i=0;i<P.length;i++)s+=P[i].lv;return s/P.length;}
+function lam(){return Math.max(0.02,Math.min(0.98,avgLv()/5));}
+function atomCount(){var n=0;for(var i=0;i<P.length;i++)if(P[i].lv<=0)n++;return n;}
+function autoReact(){var cnt=P.length;if(cnt<1){reset();return;}
+ var pf=bias;if(homeo)pf=Math.max(0.05,Math.min(0.95,bias+(cnt-8)*0.07));
+ var allAtom=atomCount()===cnt;
+ if(cnt<2){fis(P[Math.floor(Math.random()*cnt)]);return;}
+ if(allAtom||Math.random()<pf){ // слить: две ближайшие или случайные
+  var a=P[Math.floor(Math.random()*P.length)],b=null,bd=1e9;for(var i=0;i<P.length;i++){if(P[i]===a)continue;var dx=P[i].x-a.x,dy=P[i].y-a.y,d=dx*dx+dy*dy;if(d<bd){bd=d;b=P[i];}}fuse(a,b);
+ }else{ // делить: случайное не-атом если есть
+  var c=null;for(var t=0;t<8;t++){var q=P[Math.floor(Math.random()*P.length)];if(q.lv>0){c=q;break;}}if(!c)c=P[Math.floor(Math.random()*P.length)];fis(c);}}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function step(dt){for(var i=0;i<P.length;i++){var p=P[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=0.99;p.vy*=0.99;var r=rad(p);
+  if(p.x<r){p.x=r;p.vx=Math.abs(p.vx);}if(p.x>W-r){p.x=W-r;p.vx=-Math.abs(p.vx);}if(p.y<r){p.y=r;p.vy=Math.abs(p.vy);}if(p.y>Hc-r){p.y=Hc-r;p.vy=-Math.abs(p.vy);}
+  if(p.flash>0)p.flash-=dt*2.2;}}
+function box(){var c=document.getElementById('mrd-box');if(!c)return;var rc=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var w=rc.width||640,h=rc.height||360;c.width=w*dpr;c.height=h*dpr;var ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);W=w;Hc=h;
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ for(var i=0;i<P.length;i++){var p=P[i];var r=rad(p);
+  if(p.flash>0){ctx.globalAlpha=Math.max(0,p.flash);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,r+6*p.flash,0,6.283);ctx.fill();ctx.globalAlpha=1;}
+  ctx.beginPath();ctx.arc(p.x,p.y,r,0,6.283);ctx.fillStyle=colLv(p.lv);ctx.fill();
+  if(p===sel){ctx.strokeStyle='#1D9E75';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,r+4,0,6.283);ctx.stroke();}
+  ctx.fillStyle='#fff';ctx.font='600 '+Math.max(9,Math.min(14,r-1))+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.w,p.x,p.y);}
+ ctx.textBaseline='alphabetic';ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('частиц: '+P.length+'  ·  клик: выбрать → слить',10,18);ctx.textAlign='start';}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var w=r.width||640,h=r.height||64;c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ var x0=70,x1=w-70,y=h-17;var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.13;ctx.fillRect(x0,y-8,(x1-x0)*0.12,16);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-8,(x1-x0)*0.12,16);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-8,(x1-x0)*0.3,16);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('буквы · дробление',x0,y-11);ctx.textAlign='right';ctx.fillText('нечто · обобщение',x1,y-11);
+ var L=lam();var mx=x0+(x1-x0)*L;ctx.fillStyle='#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+L.toFixed(2),8,y+4);ctx.textAlign='start';}
+function render(){box();arc();var e;var cnt=P.length,at=atomCount();
+ var st;if(cnt<=1&&P[0]&&P[0].w==='нечто')st='<b style="color:#7F77DD">коллапс: всё слилось в «нечто» — одно ядро</b>';
+ else if(cnt&&at/cnt>0.5)st='<b style="color:#D85A30">шум: реактор забит буквами/атомами</b>';
+ else st='<b style="color:#1D9E75">живая зона: баланс слияния и деления</b>';
+ var L=lam(),M=4*L*(1-L);
+ function brow(l,v){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,v))*100)+'%"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+ e=document.getElementById('mrd-st');if(e)e.innerHTML=brow('λ (средняя обобщённость)',L)+brow('M(λ)',M)+'<div style="margin-top:3px">состояние: '+st+'</div>';
+ var msum=0;for(var i=0;i<P.length;i++)msum+=P[i].mass;
+ e=document.getElementById('mrd-cons');if(e)e.innerHTML='<div class="cand"><span class="w">∑ масса (сохраняется)</span><span style="color:var(--text-muted)">'+msum.toFixed(1)+' / '+Mtotal.toFixed(1)+(Math.abs(msum-Mtotal)<0.01?'  ✓ const':'  ≈')+'</span></div><div class="cand"><span class="w">частиц</span><span style="color:var(--text-muted)">'+cnt+'</span></div><div class="cand"><span class="w">атомов (букв)</span><span style="color:var(--text-muted)">'+at+'</span></div>';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;step(dt);var L=lam();FX.ambient(0.02*4*L*(1-L));FX.freq(110+L*150);
+ if(run&&auto){acc+=dt;var iv=0.55;while(acc>=iv){acc-=iv;autoReact();}}render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+function hit(mx,my){for(var i=P.length-1;i>=0;i--){var p=P[i],r=rad(p);if((mx-p.x)*(mx-p.x)+(my-p.y)*(my-p.y)<=(r+3)*(r+3))return p;}return null;}
+var cv=document.getElementById('mrd-box');
+cv.addEventListener('pointerdown',function(ev){var rc=cv.getBoundingClientRect();var mx=(ev.clientX-rc.left),my=(ev.clientY-rc.top);var p=hit(mx,my);
+ if(!p){sel=null;return;}if(sel&&sel!==p){fuse(sel,p);sel=null;}else{sel=(sel===p?null:p);}});
+$('mrd-fuse').onclick=function(){if(P.length>=2){var a=P[Math.floor(Math.random()*P.length)],b=null,bd=1e9;for(var i=0;i<P.length;i++){if(P[i]===a)continue;var dx=P[i].x-a.x,dy=P[i].y-a.y,dd=dx*dx+dy*dy;if(dd<bd){bd=dd;b=P[i];}}fuse(a,b);}};
+$('mrd-fis').onclick=function(){fis(sel||P[Math.floor(Math.random()*P.length)]);};
+$('mrd-auto').onclick=function(){auto=!auto;this.className='btn'+(auto?' on':'');this.textContent=auto?'▶ авто':'⏸ авто';};
+$('mrd-homeo').onclick=function(){homeo=!homeo;this.className='btn'+(homeo?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-bias').oninput=function(){bias=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',function(){box();arc();});reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

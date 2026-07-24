@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — хаб проекта</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#FFFFFF;--surface-0:#FBFAF7;--border:#D3D1C7;--radius:12px;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#222226;--surface-0:#1A1A1C;--border:#3A3A3C}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--surface-0);color:var(--text-primary);font-family:var(--font-sans)}
+.wrap{max-width:920px;margin:0 auto;padding:32px 24px 64px}
+h1{font-size:26px;font-weight:500;margin:0 0 4px}
+.tag{color:var(--text-secondary);font-size:15px;margin-bottom:8px}
+.idea{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;font-size:14px;line-height:1.7;color:var(--text-secondary);margin:18px 0 30px}
+.idea b{color:var(--text-primary);font-weight:500}
+h2{font-size:18px;font-weight:500;margin:30px 0 12px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{display:block;text-decoration:none;color:inherit;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);padding:15px 16px;transition:border-color .15s}
+.card:hover{border-color:var(--text-muted)}
+.card .t{font-size:15px;font-weight:500;margin-bottom:3px}
+.card .d{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.card .b{display:inline-block;margin-top:8px;font-size:12px;color:var(--text-muted)}
+.list{display:flex;flex-wrap:wrap;gap:10px}
+.chip{text-decoration:none;color:var(--text-primary);background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:13px}
+.chip:hover{border-color:var(--text-muted)}
+.foot{margin-top:40px;color:var(--text-muted);font-size:12px;border-top:1px solid var(--border);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>MERIDIAN</h1>
+<div class="tag">игра-симуляция о производстве и удержании смысла</div>
+<div class="idea">
+Нельзя строить смысл «только дроблением» (всё в шум, частица вылетает из системы) и «только обобщением» (всё в один заголовок-энциклопедию). Оба полюса бесконечны и губительны. Их включают <b>обратно пропорционально, как рычаг λ ∈ (0,1)</b>, никогда не на 100%. «Информационные атомы» — <b>инфоны</b> — кружат по замкнутой гибридной геометрии (орбиты + цветок жизни + метро), и смысл живёт <b>в живой зоне между полюсами</b>.
+</div>
+
+<h2><span class="dot" style="background:#1D9E75"></span>Играбельные прототипы</h2>
+<div class="grid">
+<a class="card" href="prototype/p21-smiley-city.html"><div class="t">★ Город смайликов</div><div class="d">Капстоун: смайлики ездят по орбитам, общаются и меняют лицо; звук, авто-λ, рекорд. Вид с высоты птичьего полёта.</div><span class="b">проход 7 · полировка</span></a>
+<a class="card" href="prototype/p4-flagship.html"><div class="t">Флагман «Рычаг смысла»</div><div class="d">2.5D god-game: держи Осмысленность Φ в живой зоне 60 секунд под нарастающим притоком.</div><span class="b">шаг 3.4 · цель/победа</span></a>
+<a class="card" href="prototype/p3-alchemy-1d.html"><div class="t">«Алхимия смысла»</div><div class="d">1D-конвейер: рычагом λ и кликами доводи сырьё до заказанного класса. Очки и точность.</div><span class="b">шаг 3.3 · 1D</span></a>
+<a class="card" href="prototype/p2-sandbox-lambda.html"><div class="t">Песочница λ</div><div class="d">Живой рычаг, реакции дробления/слияния, саморегуляция популяции, индикатор M(λ).</div><span class="b">шаг 3.2 · 2D</span></a>
+<a class="card" href="prototype/p1-geometry-visualizer.html"><div class="t">Визуализатор геометрии</div><div class="d">Инфоны кружат по орбитам; слои орбиты/цветок/метро, дифференциальное вращение.</div><span class="b">шаг 3.1 · 2D</span></a>
+<a class="card" href="prototype/p5-orbitarium-pseudo3d.html"><div class="t">Орбитарий (псевдо-3D)</div><div class="d">Объёмные оболочки на чистом Canvas, вращение мышью. Работает офлайн.</div><span class="b">шаг 4a · 3D</span></a>
+<a class="card" href="prototype/p6-orbitarium-three.html"><div class="t">Орбитарий (Three.js)</div><div class="d">Настоящий 3D: сферы-оболочки и облако точек, орбита камеры. Нужен интернет.</div><span class="b">шаг 4b · 3D</span></a>
+<a class="card" href="prototype/p7-2048-meaning.html"><div class="t">2048 Смысла</div><div class="d">Merge-головоломка наоборот: слияние ведёт к C5-коллапсу, раскол — к шуму. Держи λ в центре.</div><span class="b">палитра · головоломка</span></a>
+<a class="card" href="prototype/p8-pulse-dispatch.html"><div class="t">Конвейер-Метроном</div><div class="d">Ритм-логистика: держи бит, λ задаёт дробить/слить. Кольцо инфонов и комбо.</div><span class="b">палитра · ритм</span></a>
+<a class="card" href="prototype/p9-idle-core-foundry.html"><div class="t">Фабрика Ядра</div><div class="d">Idle с анти-целью: доход = M(λ), жадность обнуляет прибыль. Престиж «Большой Распад».</div><span class="b">палитра · idle</span></a>
+<a class="card" href="prototype/p10-anthos-breath.html"><div class="t">Дыхание Цветка</div><div class="d">Zen/ambient: веди λ дыханием, удержи середину — раскрываются слои узора и строки.</div><span class="b">палитра · zen</span></a>
+<a class="card" href="prototype/p11-sieve-defense.html"><div class="t">Сито</div><div class="d">Reverse-TD: реакторы на дуге, доведи поток до нужного класса, не свались в полюс.</div><span class="b">палитра · TD</span></a>
+<a class="card" href="prototype/p12-resonance.html"><div class="t">Резонанс</div><div class="d">Bullet-hell: лови пули по совпадению λ, остальные не тронь; края λ смертельны.</div><span class="b">палитра · экшн</span></a>
+<a class="card" href="prototype/p13-depot.html"><div class="t">Депо Смысла</div><div class="d">Roguelike-диспетчер: рисуй линии, вози инфоны к их классу, не переполни очереди.</div><span class="b">палитра · рогалик</span></a>
+<a class="card" href="prototype/p14-loom-sandbox.html"><div class="t">Алхимический Верстак</div><div class="d">Песочница-toy: рисуй λ-поле кистью, наблюдай каскады дробления и слияния.</div><span class="b">палитра · toy</span></a>
+<a class="card" href="prototype/p15-dispatcher.html"><div class="t">Диспетчер Смысла</div><div class="d">Автоматизация: замкнутый цикл, спроектируй устойчивый поток на «тап».</div><span class="b">палитра · автомат</span></a>
+<a class="card" href="prototype/p16-metropolis.html"><div class="t">Метрополис Оболочек</div><div class="d">City-builder: 3 кольца-оболочки, линии между ними, держи нагрузку в норме.</div><span class="b">палитра · сити</span></a>
+<a class="card" href="prototype/p17-schism.html"><div class="t">Разлом</div><div class="d">Асимметричный PvP hot-seat: Дробитель vs Обобщатель, перетяжка «меридиана».</div><span class="b">палитра · PvP</span></a>
+<a class="card" href="prototype/p18-astar-routing.html"><div class="t">A*-маршрутизация</div><div class="d">Углубление флагмана: путь по графу обходит центр-пробку и край-вылет. Включи/выключи штрафы.</div><span class="b">проход 6 · 6.1</span></a>
+<a class="card" href="prototype/p19-station-meet.html"><div class="t">Станция встреч</div><div class="d">Очереди и «общение» инфонов: слияние, обмен, отталкивание, очередь — по заряду и λ.</div><span class="b">проход 6 · 6.2</span></a>
+<a class="card" href="prototype/p20-flagship-3d.html"><div class="t">3D-флагман</div><div class="d">Объёмный «Орбитарий» + цель: удержи Φ в живой зоне 60 с под нарастающим притоком.</div><span class="b">проход 6 · 6.3</span></a>
+<a class="card" href="prototype/p22-semantic-station.html"><div class="t">Семантическая станция</div><div class="d">Шаг 1 модели частиц: разнотипные инфоны (полярность/тег/сродство) + формула R, влияние на встрече.</div><span class="b">проход 8 · шаг 1</span></a>
+<a class="card" href="prototype/p23-semantic-cascade.html"><div class="t">Семантический каскад</div><div class="d">Шаг 2: цепные реакции (экзотермия→цепь), роли катализатор/вирус/ингибитор, демпфер и гомеостат λ.</div><span class="b">проход 8 · шаг 2</span></a>
+<a class="card" href="prototype/p24-conveyor-editor.html"><div class="t">★ Конвейер-редактор</div><div class="d">Шаг 3: визуальный редактор — узлы (источник/реактор/фильтр/сток), drag-связи, живой поток инфонов.</div><span class="b">проход 8 · шаг 3</span></a>
+<a class="card" href="prototype/p25-cascade-rush.html"><div class="t">Каскад на счёт</div><div class="d">Шаг 4: score-attack на каскаде — цель класс+тег, искры, таймер; звук и рекорд (localStorage).</div><span class="b">проход 8 · шаг 4</span></a>
+<a class="card" href="prototype/p26-conveyor-rules.html"><div class="t">★ Конвейер 2.0</div><div class="d">Углубление редактора: правила IF/THEN в инспекторе узла + сохранение/загрузка графа (JSON).</div><span class="b">проход 8 · F2–F4</span></a>
+<a class="card" href="prototype/p27-conveyor-levels.html"><div class="t">Конвейер: уровни</div><div class="d">Головоломки: заблокированные источник/сток, бюджет узлов, 5 уровней, автопроверка победы.</div><span class="b">проход 8 · F5–F6</span></a>
+<a class="card" href="prototype/p28-cascade-defense.html"><div class="t">Каскад-защита</div><div class="d">TD на каскаде: инфоны летят к стоку, ставь катализаторы/ингибиторы, доводи до цели, гаси шум. Звук+рекорд.</div><span class="b">рой · новый жанр</span></a>
+<a class="card" href="prototype/p29-alchemy-rhythm.html"><div class="t">Алхимия-ритм</div><div class="d">Merge+ритм: жми в такт, слить/дробить инфоны к целевому классу; комбо ×λ. Звук+рекорд.</div><span class="b">рой · новый жанр</span></a>
+<a class="card" href="prototype/p30-word-transport.html"><div class="t">★ Транспорт слов</div><div class="d">Генератор осмысленных фраз: поиск по слотам, λ-маркер между полюсами, тупики и откаты, панели с честными формулами.</div><span class="b">новое направление · MVP</span></a>
+<a class="card" href="prototype/p31-word-transport-2.html"><div class="t">★ Транспорт слов 2.0</div><div class="d">Углублённое гибрид-ядро: косинус-связность по темам, согласование прилагательного по роду, шире словарь и маршруты.</div><span class="b">транспорт слов · ядро</span></a>
+<a class="card" href="prototype/p32-word-transport-tree.html"><div class="t">★ Дерево перебора</div><div class="d">Живое дерево DFS: ветвление, ныряние в полюс-тупик и откат; потенциал продолжения B по уровням (на полюсах B→0).</div><span class="b">транспорт слов · дерево</span></a>
+<a class="card" href="prototype/p33-word-transport-thesaurus.html"><div class="t">★ Тезаурус: обобщение ↔ дробление</div><div class="d">Рычаг прямо на слове: лестница абстракции (вверх к «нечто»/коллапс, вниз к буквам/шум); оба конца = редукция, жизнь в середине.</div><span class="b">транспорт слов · тезаурус</span></a>
+<a class="card" href="prototype/p34-word-transport-judge.html"><div class="t">★ Судья фраз (оффлайн + LLM)</div><div class="d">Гибрид-оценка: оффлайн грамматика+λ+связность всегда, плюс опциональная внешняя модель; итог = валидность × семантика.</div><span class="b">транспорт слов · судья</span></a>
+<a class="card" href="prototype/p35-word-transport-game.html"><div class="t">★ Рычаг смысла: слова (игра)</div><div class="d">Выбирай слова, держи λ в живой зоне мимо шума и коллапса; очки, комбо, жизни, 5 уровней с сужающейся зоной.</div><span class="b">транспорт слов · игра</span></a>
+<a class="card" href="prototype/p36-meaning-oscilloscope.html"><div class="t">★ Осциллограф смысла</div><div class="d">Смысл как динамическая система: развёртка λ(t) + фазовый портрет. Жизнь = петля, оба полюса = сток в неподвижную точку. Пресеты живой/коллапс/шум/застой.</div><span class="b">прибор · фазовый портрет</span></a>
+<a class="card" href="prototype/p37-phi-meter.html"><div class="t">★ Φ-метр (формула docs/12)</div><div class="d">Честно считает формулу витальности Φ на живом генераторе: рост g · новизна N · открытость κ · зона B; шаг φ и итог Φ по найденным фразам, диагноз провала.</div><span class="b">прибор · формула Φ</span></a>
+<a class="card" href="prototype/p38-semantic-metro.html"><div class="t">★ Семантическое метро</div><div class="d">Поезд мысли по сети понятий: центр «нечто» = коллапс, край = тупики/шум, кольцо = живая зона. Радиус станции = λ; набирает связный маршрут.</div><span class="b">прибор · метро мысли</span></a>
+<a class="card" href="prototype/p39-growing-text.html"><div class="t">★ Растущий текст (организм)</div><div class="d">Куст смысла: рост копит ветки-слова (жизнь, Φ↑); обобщение схлопывает к «нечто», дробление осыпает на буквы — оба = редукция.</div><span class="b">прибор · L-система</span></a>
+<a class="card" href="prototype/p40-hybrid-codifier.html"><div class="t">★ Гибридный кодификатор</div><div class="d">Число ↔ гибрид-конланг ↔ слово: точность и понятность пересекаются в середине (пригодность пикует) — встреча чисел и слов. ГОСТ-тезаурус токенов.</div><span class="b">прибор · число↔слово</span></a>
+<a class="card" href="prototype/p41-word-reactor.html"><div class="t">★ Реактор слов</div><div class="d">Слова-инфоны: слияние → к обобщению («нечто»), деление → к дроблению (буквы). Закон сохранения массы; авто+гомеостат держат живую зону.</div><span class="b">прибор · слияние/деление</span></a>
+<a class="card" href="prototype/p42-theme-loom.html"><div class="t">★ Ткацкий станок тем</div><div class="d">Нити-темы + слова-уток ткут полотно: узор только в середине, слева дыры (шум), справа монотон (коллапс). Узорность = связность × разнообразие.</div><span class="b">прибор · ткань тем</span></a>
+<a class="card" href="prototype/p43-representation-ladder.html"><div class="t">★ Лестница представлений</div><div class="d">Число → формула → теорема → слово: середина раскрыта в формулу (цифры) и теорему (слова); верифицируемость пикует на среднем слое = команды-порталы.</div><span class="b">прибор · число·формула·теорема·слово</span></a>
+<a class="card" href="prototype/p44-dashboard.html"><div class="t">★ Приборная доска смысла</div><div class="d">Капстоун-пульт: один рычаг λ синхронно двигает все стрелочные приборы + лампа состояния + уровень представления; навигация по всем приборам и документам.</div><span class="b">пульт · капстоун</span></a>
+<a class="card" href="prototype/p45-portal-console.html"><div class="t">★ Консоль команд-порталов</div><div class="d">Язык смысла: понятие = команда → формула + теорема-контракт + кластер; провал вглубь как по вызовам функций, перепроверка теоремы.</div><span class="b">прибор · язык команд</span></a>
+<a class="card" href="prototype/p46-meaning-program.html"><div class="t">★ Программа смысла</div><div class="d">Компоновка команд в абзац (слова/формулы/вызовы); Φ проверяет живость текста: связный рост — живо, повтор — застой, прыжки — распад.</div><span class="b">прибор · программа-абзац</span></a>
+<a class="card" href="prototype/p47-verifier.html"><div class="t">★ Верификатор представлений</div><div class="d">Настоящая верифицируемость (docs/14): формула — пересчётом, теорема — выборкой, состав — сверкой; ловит ложь (2+2=5, неверную «теорему велосипеда»).</div><span class="b">прибор · верификация</span></a>
+<a class="card" href="prototype/p48-verified-vitality.html"><div class="t">★ Проверенная витальность Φ·V</div><div class="d">Текст должен быть и живым (Φ), и истинным (V): ложное утверждение держит живость, но рушит Φ·V. Связка генератора и верификатора.</div><span class="b">прибор · Φ·V</span></a>
+<a class="card" href="prototype/p49-concept-passport.html"><div class="t">★ Паспорт понятия</div><div class="d">Весь стек на одном экране: код Меридо → λ/M(λ) → 4 представления (число/формула/теорема/слово) → реальная V → вердикт. Капстоун.</div><span class="b">прибор · синтез-капстоун</span></a>
+<a class="card" href="prototype/p50-meaning-crystal.html"><div class="t">★ Кристалл смысла (50-й)</div><div class="d">Псевдо-3D созвездие всех понятий: вращай мышью; рычаг сжимает кристалл в точку (коллапс) или распыляет в осколки (шум) — жив он в середине.</div><span class="b">капстоун · кристалл</span></a>
+<a class="card" href="prototype/p51-arithmetic-swarm.html"><div class="t">★ Арифметический рой</div><div class="d">Каждая точка со своим числом САМА решает арифметикой (сравнение/чётность/делимость), куда идти: центр/круг/край. Рой-решатель — шаг к смысловому рою.</div><span class="b">рой-решатель · математика</span></a>
+<a class="card" href="prototype/p52-semantic-swarm.html"><div class="t">★ Семантический рой</div><div class="d">Слова-агенты сами ищут родню и решают: слияние → гипероним (к центру), дробление → конкретика (к краю); журнал объясняет каждое решение.</div><span class="b">рой-решатель · смысл</span></a>
+<a class="card" href="prototype/p53-phrase-swarm.html"><div class="t">★ Рой-составитель фраз</div><div class="d">Кооперация агентов: существительное объявляет сборку, согласные по теме слетаются; осмысленная фраза кристаллизуется, бессвязная распадается.</div><span class="b">рой-решатель · фразы</span></a>
+<a class="card" href="prototype/p54-story-swarm.html"><div class="t">★ Рой-рассказчик</div><div class="d">Иерархия: слова собирают фразы, фразы сами становятся агентами и сливаются в абзацы — рой пишет рассказ из 4 абзацев без команд сверху.</div><span class="b">рой-решатель · рассказ</span></a>
+<a class="card" href="prototype/p55-text-evolution.html"><div class="t">★ Эволюция текста</div><div class="d">Рой-редакторы правят рассказ алгоритмами Knowledge System (data7): 2-opt, рационализация без потери тем, рост; отжиг; график J растёт.</div><span class="b">рой-решатель · 2-opt+отжиг</span></a>
+<a class="card" href="prototype/p56-knowledge-cycle.html"><div class="t">★ Цикл знаний ⇑⇓↔</div><div class="d">Конвейер data7+info1: рассказ →⇓ концепты →⇑ энциклопедия →⇓ гипотезы из пробелов →↔ обратно; цикл питает сам себя, покрытие связей растёт.</div><span class="b">конвейер · data7×info1</span></a>
+<a class="card" href="prototype/p57-health-metrics.html"><div class="t">★ Пульс проекта (CD·VT·CR·DB)</div><div class="d">Живые метрики здоровья info1: проект растёт по 9 уровням α, стрелки с целевыми зонами; перекос рычага → DB вне нормы. DB = эмпирический |λ−0.5|.</div><span class="b">прибор · здоровье системы</span></a>
+<a class="card" href="prototype/p58-flagship-2.html"><div class="t">★ Флагман 2.0</div><div class="d">λ — климат, не команда: каждый инфон со своим характером-порогом сам решает слиться/раздробиться; журнал решений, траекторная Φ. Игра 60 с.</div><span class="b">2.0 · личные решения</span></a>
+<a class="card" href="prototype/p59-orbitarium-2.html"><div class="t">★ Орбитарий 2.0</div><div class="d">Орбита = арифметический вывод точки (делители цели T внутрь, чужие на край); смена T пересобирает рой; феромонные тропы переходов.</div><span class="b">2.0 · арифметика+феромоны</span></a>
+<a class="card" href="prototype/p60-orbitarium-three-2.html"><div class="t">★ Орбитарий 2.0 (Three.js)</div><div class="d">Реальный 3D: решения оболочек по делимости + светящийся Путешественник идёт между родственными числами (НОД>1), оставляя след. Нужен интернет.</div><span class="b">2.0 · 3D+путешественник</span></a>
+<a class="card" href="prototype/p61-smiley-city-2.html"><div class="t">★ Город смайликов 2.0</div><div class="d">Характеры и согласие: лицо = личное состояние; беседы передают темы, слияние только по обоюдному 🤝, интроверты отселяются; благополучие города.</div><span class="b">2.0 · характеры</span></a>
+<a class="card" href="prototype/p62-pheromone-aquarium.html"><div class="t">★ Феромонный аквариум</div><div class="d">InfoAquarium на графе слов: физика Кулона+Гука, странник топчет феромонные тропы (ACO), «протоптанная мысль» из сильнейших связей; узлы таскаются.</div><span class="b">in4n · феромоны</span></a>
+<a class="card" href="prototype/p63-traveler-duel.html"><div class="t">★ Дуэт странников</div><div class="d">Характеры на одном поле: Консерватор укрепляет магистрали, Исследователь идёт в нехоженое, Скиталец наугад; вердикт — колея/живая карта/распылено.</div><span class="b">in4n · дуэт характеров</span></a>
+<a class="card" href="prototype/p64-window-walker.html"><div class="t">★ Оконный странник</div><div class="d">Окна кунг-фу × ритм мантры: K повторов петля закрыта (рёбра крепнут), затем окно впускает одно новое слово; полная петля — окно-замена. K=2–3 — живой ритм.</div><span class="b">окна · мантра-петля</span></a>
+<a class="card" href="prototype/p65-window-studio.html"><div class="t">★ Оконная студия</div><div class="d">Одна формула — три искусства: барабан (окно=сбивка), мантра (окно-замена), стих с сюр-режимом; шкала новизны с живой зоной жанра.</div><span class="b">окна · барабан·мантра·стих</span></a>
+<a class="card" href="prototype/p66-singing-aquarium.html"><div class="t">★ Поющий аквариум</div><div class="d">Рой сам находит, что петь: сильнейшая феромонная тропа = куплет; тропа держится — повтор, перестроилась — окно и новый куплет. Ноты по темам.</div><span class="b">феромоны × окна × песня</span></a>
+<a class="card" href="prototype/p67-aquarium-orchestra.html"><div class="t">★ Оркестр аквариумов</div><div class="d">Три голоса на одной сети: бас-колея, живой тенор, искры-шум — у каждого своя феромонная память; здоровье = распределение голосов по рычагу.</div><span class="b">оркестр · многоголосие рычага</span></a>
+<a class="card" href="prototype/p68-knowledge-pilgrimage.html"><div class="t">★ Паломничество знаний</div><div class="d">Куб-ядро в центре (остаться нельзя), край-вылет (нельзя тоже): смайлики-пилигримы идут 7 осмысленных кругов — синтез внутрь, ссылка наружу, работа в Книгу.</div><span class="b">7 кругов · спираль смысла</span></a>
+<a class="card" href="prototype/p69-semantic-judge.html"><div class="t">★ Семантический судья 2.0</div><div class="d">Честная близость вместо тег-игрушки: 8 градуированных признаков против квантованного тег-косинуса; скаттер 136 пар показывает слепоту и фальшь старого.</div><span class="b">docs/16 · честная семантика</span></a>
+<a class="card" href="prototype/p70-rationalizer-gate.html"><div class="t">★ Гейт рационализации</div><div class="d">Формула data7 исполняется: сжатие проходит только при I ≥ (1−ε)·I₀ — гейт реально отклоняет; режим «без гейта» показывает вырождение в коллапс.</div><span class="b">docs/16 · сжатие без потери</span></a>
+<a class="card" href="prototype/p71-knowledge-cycle-2.html"><div class="t">★ Цикл знаний 2.0</div><div class="d">Все переносы вместе: пробелы ищет честная семантика (слабые пары отбраковываются), агрегация — через гейт; цикл замыкается, когда настоящие пробелы исчерпаны.</div><span class="b">docs/16 · финал дорожной карты</span></a>
+<a class="card" href="prototype/p72-cauldron-bridge.html"><div class="t">★ Мост: Котёл × MERIDIAN</div><div class="d">Умный алхимик: тройка по честному пробелу (близкая пара + дальний катализатор) против случайной; живое сравнение качества Q двух режимов.</div><span class="b">котёл · умный алхимик</span></a>
+<a class="card" href="prototype/p73-reasonable-vortex.html"><div class="t">★ Разумный круговорот</div><div class="d">Углубление п68 на честной математике: иррациональный поворот (Вейль) + спираль φ + реальные цифры π (Мэчин) + бэктрекинг у полюсов. Центр = коллапс, край = вылет, жизнь = круговорот между ними; откаты = мера M(λ).</div><span class="b">п68 · вихрь · π · бэктрекинг</span></a>
+<a class="card" href="prototype/p77-nursery-orbit.html"><div class="t">★ Кольцо-потешка</div><div class="d">Упрощённый прибор: одна нормировка u∈(0,1), 2D-жидкость в кольце, 3D-ядро-статика в центре и внешняя орбита распада. Формула, картинка и детская строка «раз-круг, два-не в центр, три-не в край, четыре-в ряд» идут синхронно.</div><span class="b">u-нормировка · 2D-жидкость · мантра</span></a>
+<a class="card" href="prototype/p78-living-ring-interface.html"><div class="t">★ Живое кольцо</div><div class="d">Новый целевой интерфейс на общем semantic-core: ввод внешнего условия превращает фразу в теговый архипелаг. Частицы больше не одинаковые: core/detail/bridge проходят через LCA, SemFit, g↔-мосты, конфликтные разрывы и исполняемую портал-команду с контрактом, откатом, прогнозом следующих ходов, развилкой внешних импульсов, внутренним сочинителем продолжения, цепью RAG-обоснования, предохранителем крайностей, балансировкой ремонта, памятью траектории, RAG-архипелагом, который группирует теги в смысловые острова, смысловой сборкой `semanticWeave()`, которая превращает острова в каркас продолжения: тема → узел → мост → ход → строка, и оконным ритмом `semanticWindowRhythm()`, где K повторов открывают управляемое окно новизны, поиском с откатом `semanticBacktrack()`, который пробует ветки, отбрасывает центр/край/разрыв и выбирает продолжение, и критерием цели `semanticGoal()`, где ответ понимается как гомеостаз живого кольца, а не выход в полюс, плюс формулой `semanticPhi()` для проверки роста, новизны, открытости и баланса продолжения и `semanticRails()` для скелета тема-действие-мост-деталь-дальше.</div><span class="b">ввод условия · архипелаг тегов · окно K · откат · цель · Φ · рельсы</span></a>
+<a class="card" href="prototype/p74-pov-cartoon.html"><div class="t">★ POV-мультик</div><div class="d">Изображение из вращения, как пропеллер с мигающими диодами: лопасть крутится по кольцу, диоды вспыхивают по образу, инерция зрения сшивает картинку. Нестабильный живой мультик (🙂♥★●) с дрейфом — фосфор-выдержка вместо застывшего кадра.</div><span class="b">POV · инерция зрения · мультик</span></a>
+<a class="card" href="prototype/p75-rain-cipher.html"><div class="t">★ Дождь-шифр</div><div class="d">Лужа под дождём: капли-осцилляторы, круги накладываются (интерференция). Синхронизация Курамото делает рябь когерентной и фигура устаканивается. Честно: не шифр — это про порядок/когерентность; настоящий крипто-родственник (хаос-синхронизация) назван внутри.</div><span class="b">волны · Курамото · автоколебания</span></a>
+<a class="card" href="prototype/p76-cave-drum.html"><div class="t">★ Наскальный барабан</div><div class="d">Примитивы-фигуры на наклонённом бубне, две группы вращаются навстречу (⟳⟲) — муар и параллакс дают глубину; удар палкой рождает кольцо-волну и «выбивает» задетые фигуры. Честный 2.5D псевдо-3D из векторных штрихов; хаос-вращение = смаз.</div><span class="b">2.5D · бубен · встречные вращения</span></a>
+</div>
+
+<h2><span class="dot" style="background:#378ADD"></span>Диаграммы (атлас)</h2>
+<div class="list">
+<a class="chip" href="docs/diagrams/D1-concept-map.svg">D1 концепт-карта</a>
+<a class="chip" href="docs/diagrams/D2-orbits-shells.svg">D2 орбиты</a>
+<a class="chip" href="docs/diagrams/D3-flower-of-life.svg">D3 цветок жизни</a>
+<a class="chip" href="docs/diagrams/D4-metro-conveyor.svg">D4 метро</a>
+<a class="chip" href="docs/diagrams/D5-infon-periodic-table.svg">D5 таблица инфонов</a>
+<a class="chip" href="docs/diagrams/D6-meaning-function.svg">D6 M(λ)</a>
+<a class="chip" href="docs/diagrams/D7-reactions.svg">D7 реакции</a>
+<a class="chip" href="docs/diagrams/D8-object-dependencies.svg">D8 зависимости</a>
+</div>
+
+<h2><span class="dot" style="background:#7F77DD"></span>Документация (теория + псевдокод)</h2>
+<div class="list">
+<a class="chip" href="docs/00-README.md">00 индекс</a>
+<a class="chip" href="docs/01-philosophy.md">01 философия</a>
+<a class="chip" href="docs/02-infons-closed-system.md">02 инфоны</a>
+<a class="chip" href="docs/03-geometry-topology.md">03 геометрия</a>
+<a class="chip" href="docs/04-logistics-dynamics.md">04 логистика</a>
+<a class="chip" href="docs/05-game-variants.md">05 варианты</a>
+<a class="chip" href="docs/06-pseudocode.md">06 псевдокод</a>
+<a class="chip" href="docs/07-roadmap.md">07 дорожная карта</a>
+<a class="chip" href="docs/08-genre-palette.md">08 палитра жанров</a>
+<a class="chip" href="docs/09-particle-model-and-semantic-conveyor.md">09 модель частиц + конвейер</a>
+<a class="chip" href="docs/10-playtest-reviews.md">10 плейтест-ревью</a>
+<a class="chip" href="docs/11-word-transport.md">11 транспорт слов</a>
+<a class="chip" href="docs/12-humanitarian-formula-of-meaning.md">12 формула смысла Φ</a>
+<a class="chip" href="docs/13-words-numbers-hybrids.md">13 слова·цифры·гибриды</a>
+<a class="chip" href="docs/14-ladder-number-formula-theorem-word.md">14 лестница·формула·теорема</a>
+<a class="chip" href="docs/15-atlas-meridian.md">15 Атлас (обзор)</a>
+<a class="chip" href="docs/16-one-lever-five-systems.md">16 один рычаг — пять систем</a>
+<a class="chip" href="docs/17-windows-theory.md">17 окна: кунг-фу·мантра·рой</a>
+<a class="chip" href="docs/18-master-plan.md">18 мастер-план (7 систем)</a>
+<a class="chip" href="docs/19-mathematics-of-reasonable-circulation.md">19 математика круговорота</a>
+</div>
+
+<div class="foot">Проект MERIDIAN · 78 прототипов · 19 документов · 8 диаграмм · games/02</div>
+</div>
+</body>
+</html>

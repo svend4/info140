@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — флагман «Рычаг смысла» (шаг 3.4)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--radius:8px;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}
+@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:780px;width:100%;color:var(--text-primary)}
+.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:440px;border:1px solid var(--border);border-radius:12px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:12px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:var(--radius);padding:6px 14px;font-size:13px}
+.lam{display:flex;align-items:center;gap:10px;margin-top:12px}
+.lam input{flex:1}
+.stat b{color:var(--text-primary);font-weight:500}
+.bar{height:9px;border-radius:5px;background:var(--border);overflow:hidden;width:150px;display:inline-block;vertical-align:middle}
+.bar>i{display:block;height:100%;background:#1D9E75;width:0%}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="h1">MERIDIAN — флагман «Рычаг смысла» (шаг 3.4)</div>
+<div class="sub">извне растёт приток сырья (к шуму); держи Осмысленность Φ в живой зоне 60 секунд рычагом λ</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam">
+<span class="stat" style="color:var(--text-secondary)">дробление</span>
+<input id="mrd-lambda" type="range" min="0.02" max="0.98" step="0.01" value="0.5">
+<span class="stat" style="color:var(--text-secondary)">обобщение</span>
+<span class="stat" style="min-width:70px">λ = <b id="mrd-lam">0.50</b></span>
+</div>
+<div class="row">
+<button id="mrd-play" class="btn">⏸ пауза</button>
+<button id="mrd-reset" class="btn">↻ заново</button>
+<button id="mrd-sound" class="btn">♪ звук</button>
+<span class="stat">осталось: <b id="mrd-time">60</b> с</span>
+<span class="stat">Φ: <span class="bar"><i id="mrd-phibar"></i></span></span>
+<span class="stat">инфонов: <b id="mrd-n">0</b></span>
+<span class="stat">очки: <b id="mrd-score">0</b></span>
+<span class="stat">рекорд: <b id="mrd-best">0</b></span>
+<span class="stat" id="mrd-result" style="font-weight:500"></span>
+</div>
+<div class="note">Φ = жизнь(λ) × баланс популяции (0 на полюсах). Приток усиливается со временем — поднимай λ, но не до упора. Поражение: рой к краю (шум) или коллапс в центр. Файл: prototype/p4-flagship.html</div>
+</div>
+<script src="lib/mrd-fx.js"></script>
+<script>
+(function(){
+  var cvs=document.getElementById('mrd-canvas');if(!cvs)return;
+  var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+  var ctx=cvs.getContext('2d');var TAU=Math.PI*2;
+  var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+  var ORB=[0.16,0.30,0.44,0.58,0.72,0.86];
+  var MIN=18,MAX=320,SPLIT=0.07,MERGE=0.07,TWIN=60;
+  var st={playing:true,lambda:0.5,over:false,result:''};
+  var W=0,H=0,cx=0,cy=0,scale=0,infons=[],elapsed=0,score=0,last=0,racc=0,sacc=0,best=FX.best('meridian_flagship_best');
+  function theme(){var d=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return d?{ui:'#E8E8EA',bound:'#888780'}:{ui:'#2C2C2A',bound:'#9A9A93'};}
+  function resize(){var r=cvs.getBoundingClientRect();var dpr=window.devicePixelRatio||1;
+    W=r.width||680;H=r.height||440;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=W/2;cy=H/2;scale=Math.min(W,H)/2-14;}
+  function rOf(i){return ORB[i]*scale;}
+  function wOf(i){return 0.0045*Math.pow(0.86/ORB[i],1.5);}
+  function dotR(m){return Math.max(2,Math.min(11,1.6+Math.sqrt(m)*1.5));}
+  function reset(){infons=[];for(var i=0;i<80;i++){infons.push({lv:3,a:Math.random()*TAU,m:1});}
+    elapsed=0;score=0;racc=0;sacc=0;st.over=false;st.result='';st.playing=true;
+    var pb=document.getElementById('mrd-play');if(pb)pb.textContent='⏸ пауза';
+    var rs=document.getElementById('mrd-result');if(rs)rs.textContent='';}
+  function inflowCount(){return 1+Math.floor(elapsed/11);}
+  function inflow(c){for(var i=0;i<c;i++){if(infons.length>=MAX)break;infons.push({lv:5,a:Math.random()*TAU,m:1});}}
+  function react(){var L=st.lambda,add=[],i,f;
+    for(i=0;i<infons.length;i++){f=infons[i];
+      if(f.lv<5 && (infons.length+add.length)<MAX && Math.random()<SPLIT*(1-L)){
+        f.dead=true;add.push({lv:f.lv+1,a:f.a+0.06,m:f.m/2});add.push({lv:f.lv+1,a:f.a-0.06,m:f.m/2});}}
+    var al=[];for(i=0;i<infons.length;i++)if(!infons[i].dead)al.push(infons[i]);infons=al.concat(add);
+    var pending={},out=[],count=infons.length;
+    for(i=0;i<infons.length;i++){f=infons[i];var p=pending[f.lv];
+      if(p && f.lv>0 && count>MIN && Math.random()<MERGE*L){
+        out.push({lv:f.lv-1,a:(f.a+p.a)/2,m:f.m+p.m});pending[f.lv]=null;count-=1;}
+      else{if(p==null){pending[f.lv]=f;}else{out.push(p);pending[f.lv]=f;}}}
+    for(var lv in pending){if(pending[lv])out.push(pending[lv]);}
+    infons=out;}
+  function popFactor(){var n=infons.length;var half=(MAX-MIN)/2;return Math.max(0,Math.min(1,Math.min(n-MIN,MAX-n)/half));}
+  function phi(){return 4*st.lambda*(1-st.lambda)*popFactor();}
+  function draw(){var t=theme();ctx.clearRect(0,0,W,H);var n=infons.length;
+    var congest=Math.max(0,Math.min(1,(n/MAX-0.55)/0.45));
+    ctx.save();ctx.strokeStyle=congest>0.05?'#D85A30':t.bound;ctx.setLineDash([5,5]);ctx.globalAlpha=0.4+0.5*congest;ctx.lineWidth=1+3*congest;
+    ctx.beginPath();ctx.arc(cx,cy,scale*0.96,0,TAU);ctx.stroke();ctx.restore();
+    ctx.save();ctx.lineWidth=1.2;for(var i=0;i<6;i++){ctx.strokeStyle=RAMP[i];ctx.globalAlpha=0.4;ctx.beginPath();ctx.arc(cx,cy,rOf(i),0,TAU);ctx.stroke();}ctx.restore();
+    var collapse=Math.max(0,Math.min(1,(60-n)/45));
+    ctx.fillStyle=RAMP[0];ctx.globalAlpha=0.5+0.5*collapse;ctx.beginPath();ctx.arc(cx,cy,5+8*collapse,0,TAU);ctx.fill();ctx.globalAlpha=1;
+    for(var k=0;k<infons.length;k++){var f=infons[k],r=rOf(f.lv);var x=cx+r*Math.cos(f.a),y=cy+r*Math.sin(f.a);
+      ctx.fillStyle=RAMP[f.lv];ctx.globalAlpha=0.9;ctx.beginPath();ctx.arc(x,y,dotR(f.m),0,TAU);ctx.fill();}
+    ctx.globalAlpha=1;
+    if(st.over){ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='600 22px system-ui';
+      ctx.fillText(st.result,cx,cy-6);ctx.font='14px system-ui';
+      ctx.fillText('нажми «заново»',cx,cy+22);ctx.textAlign='start';}}
+  function hud(){var e,p=phi();
+    e=document.getElementById('mrd-lam');if(e)e.textContent=st.lambda.toFixed(2);
+    e=document.getElementById('mrd-time');if(e)e.textContent=Math.max(0,Math.ceil(TWIN-elapsed));
+    e=document.getElementById('mrd-n');if(e)e.textContent=infons.length;
+    e=document.getElementById('mrd-score');if(e)e.textContent=Math.round(score);
+    e=document.getElementById('mrd-best');if(e)e.textContent=Math.round(best);
+    e=document.getElementById('mrd-phibar');if(e){e.style.width=(p*100)+'%';e.style.background=p>0.5?'#1D9E75':(p>0.25?'#EF9F27':'#D85A30');}}
+  function endGame(win){st.over=true;st.playing=false;st.result=win?'Победа! Φ удержана':'Поражение: '+(infons.length>=MAX?'шум (дробление)':'коллапс (обобщение)');
+    best=FX.best('meridian_flagship_best',Math.round(score));
+    if(win)FX.chord([392,494,587,784],0.07);else FX.blip(110,0.09,'sawtooth');
+    var rs=document.getElementById('mrd-result');if(rs){rs.textContent=st.result;rs.style.color=win?'#1D9E75':'#D85A30';}}
+  function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+    if(st.playing&&!st.over){elapsed+=dt;
+      for(var k=0;k<infons.length;k++)infons[k].a+=wOf(infons[k].lv)*dt*60;
+      racc+=dt;if(racc>=0.09){racc=0;react();}
+      sacc+=dt;if(sacc>=0.7){sacc=0;inflow(inflowCount());}
+      score+=phi()*dt*10;
+      if(infons.length>=MAX||infons.length<=MIN)endGame(false);
+      else if(elapsed>=TWIN)endGame(true);}
+    FX.ambient(0.03*phi());FX.freq(110+st.lambda*150);
+    draw();hud();requestAnimationFrame(loop);}
+  function $(id){return document.getElementById(id);}
+  var pb=$('mrd-play');if(pb)pb.onclick=function(){if(st.over)return;st.playing=!st.playing;pb.textContent=st.playing?'⏸ пауза':'▶ играть';};
+  var rb=$('mrd-reset');if(rb)rb.onclick=function(){reset();};
+  var sb=$('mrd-sound');if(sb)sb.onclick=function(){var on=FX.toggle();sb.textContent=on?'♪ звук вкл':'♪ звук';};
+  var lb=$('mrd-lambda');if(lb)lb.oninput=function(){st.lambda=parseFloat(lb.value);};
+  window.addEventListener('resize',resize);
+  resize();reset();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

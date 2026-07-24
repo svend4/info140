@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Семантический каскад (шаг 2 / B-полный)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:600px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-canvas{display:block;width:100%;height:430px;border:1px solid var(--border);border-radius:12px;touch-action:none}
+.lam{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--text-secondary)}.lam input{flex:1}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}
+.btn.on{border-color:#1D9E75;color:#1D9E75}.stat b{color:var(--text-primary);font-weight:500}.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Семантический каскад (шаг 2)</div>
+<div class="sub">реакции распространяются: слияние греет соседей → цепь. Кольцо: роль (🟢катализатор/🔴вирус/⚪ингибитор) или полярность; буква — тег. Впрысни искру и смотри лавину</div>
+<canvas id="mrd-canvas"></canvas>
+<div class="lam"><span>дробление</span><input id="mrd-lam" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span>обобщение</span><span style="min-width:54px">λ=<b id="mrd-lamv" style="color:var(--text-primary)">0.50</b></span></div>
+<div class="row">
+<button class="btn" id="mrd-spark">⚡ искра</button>
+<button class="btn" id="mrd-vir">🔴 вирус</button>
+<button class="btn" id="mrd-cat">🟢 катализатор</button>
+<button class="btn" id="mrd-inh">⚪ ингибитор</button>
+<button class="btn on" id="mrd-damp">демпфер: вкл</button>
+<button class="btn" id="mrd-reset">↻ заново</button></div>
+<div class="row">
+<span class="stat">активность каскада: <b id="mrd-casc">0</b></span>
+<span class="stat">пик: <b id="mrd-max">0</b></span>
+<span class="stat">инфонов: <b id="mrd-n">0</b></span>
+<span class="stat">состояние: <b id="mrd-state">—</b></span></div>
+<div class="note">Демпфер (кулдаун + остывание + гомеостат λ→0.5) держит каскад от свала в полюс. Выключи его и впрысни искру при крайнем λ — увидишь неуправляемую лавину. Файл: prototype/p23-semantic-cascade.html</div>
+</div><script>
+(function(){var cvs=document.getElementById('mrd-canvas');if(!cvs)return;var ctx=cvs.getContext('2d'),TAU=Math.PI*2;
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];function colOf(c){return RAMP[5-c];}
+var TAGS=['А','Б','В','Г'];
+var W=0,H=0,P=[],lam=0.5,damp=true,last=0,racc=0,links=[],cascNow=0,cascMax=0,MAX=160,IR=34;
+function th(){var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;return d?{ui:'#E8E8EA'}:{ui:'#2C2C2A'};}
+function rz(){var r=cvs.getBoundingClientRect(),dpr=devicePixelRatio||1;W=r.width||560;H=r.height||430;cvs.width=W*dpr;cvs.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+function mk(x,y){return {x:x,y:y,vx:(Math.random()-0.5)*30,vy:(Math.random()-0.5)*30,cls:1+((Math.random()*2)|0),m:1,p:Math.random()*2-1,s:(Math.random()*4)|0,a:Math.random(),act:0.25+Math.random()*0.25,thr:0.5,tm:0,role:'inert',vl:0,cd:0};}
+function reset(){P=[];for(var i=0;i<70;i++)P.push(mk(Math.random()*W,Math.random()*H));links=[];cascNow=0;cascMax=0;}
+function link(x1,y1,x2,y2,c){links.push({x1:x1,y1:y1,x2:x2,y2:y2,c:c,t:0.5});}
+function near(o,R){var res=[];for(var i=0;i<P.length;i++){var q=P[i];if(q===o||q.dead)continue;var dx=q.x-o.x,dy=q.y-o.y;if(dx*dx+dy*dy<R*R)res.push(q);}return res;}
+function spark(x,y){var n=near({x:x,y:y},60);for(var i=0;i<n.length;i++)n[i].act=Math.min(1,n[i].act+0.6);}
+function addRole(role){var i=(Math.random()*P.length)|0;if(!P.length)return;var o=P[i];o.role=role;if(role==='viral'){o.vl=8;o.act=0.9;}if(role==='cat')o.act=0.9;}
+function fire(){cascNow+=1;if(cascNow>cascMax)cascMax=cascNow;}
+function react(dt){var newp=[];
+ for(var i=0;i<P.length;i++){var a=P[i];if(a.dead||a.cd>0)continue;var nb=near(a,IR);if(!nb.length)continue;
+  if(a.role==='cat'){for(var k=0;k<nb.length;k++){nb[k].tm=Math.min(nb[k].tm,-0.25);}a.cd=2;continue;}
+  if(a.role==='inhib'){for(var k2=0;k2<nb.length;k2++){nb[k2].tm+=0.25;nb[k2].act*=0.7;}a.cd=2;continue;}
+  if(a.role==='viral'&&a.act>0.15){var b0=nb[0];var sim=a.s===b0.s?1:0.4;if(Math.random()<0.6*sim*a.act){b0.s=a.s;if(b0.role==='inert'){b0.role='viral';b0.vl=6;}a.act-=0.15;a.cd=3;link(a.x,a.y,b0.x,b0.y,'#D85A30');fire();}continue;}
+  // core: выбрать соседа
+  var b=nb[0];
+  var pol=a.p*b.p,sameTag=a.s===b.s,R=(0.5*(sameTag?1:0)+0.5*(-a.p*b.p)+0.3*(a.a*b.a))*(4*lam*(1-lam));
+  var eth=Math.max(0.12,Math.min(0.95,b.thr+b.tm));
+  if(pol>0.15){var dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1;a.vx+=dx/d*20;a.vy+=dy/d*20;a.cd=2;continue;}
+  if(R>=eth&&sameTag&&a.cls<5&&(a.act+b.act)>=0.5){var hv=a.m>=b.m?a:b;
+   var np=mk((a.x+b.x)/2,(a.y+b.y)/2);np.cls=Math.min(5,Math.max(a.cls,b.cls)+1);np.m=a.m+b.m;np.p=(a.p+b.p)/2;np.s=hv.s;np.a=Math.min(1,(a.a+b.a)/2);np.act=0.2;np.cd=4;
+   newp.push(np);a.dead=true;b.dead=true;
+   var ex=near(np,IR+8);for(var e=0;e<ex.length;e++)ex[e].act=Math.min(1,ex[e].act+0.3);// экзотермия → топливо каскада
+   link(a.x,a.y,b.x,b.y,'#1D9E75');fire();continue;}
+  if(a.act>0.8&&lam<0.4&&a.cls>0&&P.length+newp.length<MAX){a.dead=true;
+   var c1=mk(a.x+6,a.y),c2=mk(a.x-6,a.y);c1.cls=c2.cls=a.cls-1;c1.m=c2.m=a.m/2;c1.s=c2.s=a.s;c1.act=c2.act=0.45;c1.cd=c2.cd=4;newp.push(c1,c2);
+   link(a.x,a.y,a.x+6,a.y,'#EF9F27');fire();continue;}
+  // обмен (влияние, без каскада)
+  var Hh=a.m>=b.m?a:b,Ll=a.m>=b.m?b:a;Ll.s=Hh.s;var mp=(a.p+b.p)/2;a.p=mp;b.p=mp;a.cd=3;b.cd=1;}
+ var keep=[];for(var j=0;j<P.length;j++)if(!P[j].dead)keep.push(P[j]);P=keep.concat(newp);}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ for(var i=0;i<P.length;i++){var o=P[i];o.x+=o.vx*dt;o.y+=o.vy*dt;o.vx*=0.985;o.vy*=0.985;
+  if(o.x<6){o.x=6;o.vx=-o.vx;}if(o.x>W-6){o.x=W-6;o.vx=-o.vx;}if(o.y<6){o.y=6;o.vy=-o.vy;}if(o.y>H-6){o.y=H-6;o.vy=-o.vy;}
+  o.act=Math.min(1,o.act+0.04*dt);o.tm*=0.96;if(o.cd>0)o.cd-=1;if(o.role==='viral'){o.vl-=dt;if(o.vl<=0)o.role='inert';}}
+ racc+=dt;if(racc>=0.08){racc=0;react(dt);if(damp)lam+=(0.5-lam)*0.03;var s=document.getElementById('mrd-lam');if(s&&damp)s.value=lam;}
+ cascNow*=0.94;
+ for(i=links.length-1;i>=0;i--){links[i].t-=dt;if(links[i].t<=0)links.splice(i,1);}
+ draw();hud();requestAnimationFrame(loop);}
+function drawInf(o){var r=6+o.a*5;ctx.fillStyle=colOf(o.cls);ctx.beginPath();ctx.arc(o.x,o.y,r,0,TAU);ctx.fill();
+ var rc=o.role==='cat'?'#1D9E75':o.role==='viral'?'#D85A30':o.role==='inhib'?'#888780':(o.p>0?'#EF9F27':'#378ADD');
+ ctx.strokeStyle=rc;ctx.lineWidth=o.role==='inert'?(1+Math.abs(o.p)*3):2.5;ctx.beginPath();ctx.arc(o.x,o.y,r+3,0,TAU);ctx.stroke();
+ ctx.fillStyle='#fff';ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=2;ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.strokeText(TAGS[o.s],o.x,o.y);ctx.fillText(TAGS[o.s],o.x,o.y);ctx.textBaseline='alphabetic';ctx.textAlign='start';}
+function draw(){ctx.clearRect(0,0,W,H);
+ for(var i=0;i<links.length;i++){var l=links[i];ctx.strokeStyle=l.c;ctx.globalAlpha=Math.min(1,l.t*2);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(l.x1,l.y1);ctx.lineTo(l.x2,l.y2);ctx.stroke();}ctx.globalAlpha=1;
+ for(i=0;i<P.length;i++)drawInf(P[i]);}
+function avg(){if(!P.length)return 2.5;var s=0;for(var i=0;i<P.length;i++)s+=P[i].cls;return s/P.length;}
+function hud(){var e;e=document.getElementById('mrd-lamv');if(e)e.textContent=lam.toFixed(2);
+ e=document.getElementById('mrd-casc');if(e)e.textContent=Math.round(cascNow);e=document.getElementById('mrd-max');if(e)e.textContent=Math.round(cascMax);
+ e=document.getElementById('mrd-n');if(e)e.textContent=P.length;
+ var av=avg(),lbl,col;if(av>3.7||P.length<=8){lbl='коллапс';col='#7F77DD';}else if(av<1.2||P.length>=MAX*0.9){lbl='шум';col='#D85A30';}else{lbl='живая зона';col='#1D9E75';}
+ e=document.getElementById('mrd-state');if(e){e.textContent=lbl;e.style.color=col;}}
+cvs.addEventListener('mousedown',function(e){var r=cvs.getBoundingClientRect();spark(e.clientX-r.left,e.clientY-r.top);});
+cvs.addEventListener('touchstart',function(e){var r=cvs.getBoundingClientRect();spark(e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);},{passive:true});
+document.getElementById('mrd-spark').onclick=function(){spark(W/2,H/2);};
+document.getElementById('mrd-vir').onclick=function(){addRole('viral');};
+document.getElementById('mrd-cat').onclick=function(){addRole('cat');};
+document.getElementById('mrd-inh').onclick=function(){addRole('inhib');};
+document.getElementById('mrd-damp').onclick=function(){damp=!damp;this.textContent='демпфер: '+(damp?'вкл':'выкл');this.className='btn'+(damp?' on':'');};
+document.getElementById('mrd-reset').onclick=reset;
+var sl=document.getElementById('mrd-lam');sl.oninput=function(){lam=parseFloat(sl.value);};
+addEventListener('resize',rz);rz();reset();requestAnimationFrame(loop);})();
+</script></body></html>

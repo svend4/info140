@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Орбитарий 2.0: арифметические орбиты + феромоны</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:400px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);cursor:grab;touch-action:none}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Орбитарий 2.0</div>
+<div class="sub">переработка p5 по новым принципам: орбита — не данность, а РЕШЕНИЕ. В центре горит цель T; каждая точка со своим числом n сама считает: делитель T → внутрь (часть структуры), равное → живая середина, кратное → рабочая орбита, чужое → край. Частые переходы натаптывают феромонные тропы (in4n). Тяни мышью — вращай</div>
+<canvas id="mrd-c"></canvas>
+<div class="panel"><h3>Журнал решений (арифметика каждой точки)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ такты</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="2"></label></div>
+<div class="note">Отличие от p5: там все точки жили на орбите класса и подчинялись глобальным вероятностям; здесь орбита = личный арифметический вывод (T % n), и при смене цели T рой пересобирается сам. Феромоны: чем чаще пара орбит соединяется переходами, тем ярче тропа между ними — накопление ↔-связей (механизм из InfoAquarium). Файл: prototype/p59-orbitarium-2.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var TAU=Math.PI*2;
+var SH=[0.24,0.44,0.62,0.85]; // делитель, равное(жив.), кратное, чужое
+var SHN=['делители (структура T)','равное T (живая)','кратные T','чужие числа (край)'];
+var COL=['#7F77DD','#1D9E75','#378ADD','#D85A30'];
+var P=[],trail={},TSEQ=[2,3,4,5,6,8,10,12],ti=0,run=true,spd=2,acc=0,last=0,A=0.6,tilt=0.5,drag=false,px=0,py=0,logL=[];
+function T(){return TSEQ[ti%TSEQ.length];}
+function shellOf(n,t){if(n===t)return 1;if(t%n===0)return 0;if(n%t===0)return 2;return 3;}
+function reset(){P=[];trail={};logL=[];for(var i=0;i<26;i++){var n=1+(i%13);P.push({n:n,th:Math.random()*TAU,ph:(Math.random()*2-1)*0.9,s:shellOf(n,T()),rr:0.5});}}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function beat(){ti++;var t=T();var moved=0,ex=null;
+ for(var i=0;i<P.length;i++){var p=P[i];var ns=shellOf(p.n,t);
+  if(ns!==p.s){var k=Math.min(p.s,ns)+'-'+Math.max(p.s,ns);trail[k]=(trail[k]||0)+1;moved++;
+   if(!ex)ex={n:p.n,from:p.s,to:ns};p.s=ns;}}
+ if(ex){var why=ex.to===0?(t+' % '+ex.n+' = 0 — делитель, внутрь'):ex.to===1?(ex.n+' = '+t+' — равное, живая середина'):ex.to===2?(ex.n+' % '+t+' = 0 — кратное'):(ex.n+' не связано с '+t+' — на край');
+  addLog('такт: цель T=<b>'+t+'</b> · перелетело '+moved+' · пример: №'+ex.n+' → «'+SHN[ex.to]+'» ('+why+')');}
+ else addLog('такт: цель T=<b>'+t+'</b> · рой уже на местах');
+ FX.blip(300+t*20,0.05);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function proj(rr,th,ph,cx,cy,R){var x=Math.cos(th)*Math.cos(ph)*rr,y=Math.sin(ph)*rr*0.6,z=Math.sin(th)*Math.cos(ph)*rr;
+ var ca=Math.cos(A),sa=Math.sin(A);var x1=x*ca-z*sa,z1=x*sa+z*ca;
+ var ct=Math.cos(tilt),st=Math.sin(tilt);var y1=y*ct-z1*st,z2=y*st+z1*ct;
+ return [cx+x1*R,cy-y1*R,z2];}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||400;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-24;
+ // оболочки-эллипсы
+ for(var s=0;s<4;s++){ctx.strokeStyle=COL[s];ctx.globalAlpha=0.35;ctx.lineWidth=1;
+  ctx.beginPath();for(var a=0;a<=48;a++){var th=a/48*TAU;var pr=proj(SH[s],th,0,cx,cy,R);if(a===0)ctx.moveTo(pr[0],pr[1]);else ctx.lineTo(pr[0],pr[1]);}ctx.stroke();}
+ ctx.globalAlpha=1;
+ // феромонные тропы между оболочками
+ for(var k in trail){var v=trail[k];if(v<1)continue;var pr2=k.split('-');var s1=+pr2[0],s2=+pr2[1];
+  var al=Math.min(0.75,v*0.09);ctx.strokeStyle='#EF9F27';ctx.globalAlpha=al;ctx.lineWidth=Math.min(5,0.6+v*0.35);
+  for(var m=0;m<3;m++){var th2=m/3*TAU+0.5;var a1=proj(SH[s1],th2,0,cx,cy,R),a2=proj(SH[s2],th2,0,cx,cy,R);
+   ctx.beginPath();ctx.moveTo(a1[0],a1[1]);ctx.lineTo(a2[0],a2[1]);ctx.stroke();}}
+ ctx.globalAlpha=1;
+ // цель в центре
+ var c0=proj(0,0,0,cx,cy,R);ctx.fillStyle=uic;ctx.font='600 24px system-ui';ctx.textAlign='center';ctx.fillText(''+T(),c0[0],c0[1]+8);
+ ctx.font='10px system-ui';ctx.fillStyle=d?'#888780':'#9A9A93';ctx.fillText('цель T',c0[0],c0[1]+22);
+ // точки (сортировка по глубине)
+ var pts=[];for(var i=0;i<P.length;i++){var p=P[i];var pr3=proj(p.rr,p.th,p.ph,cx,cy,R);pts.push({p:p,x:pr3[0],y:pr3[1],z:pr3[2]});}
+ pts.sort(function(a,b){return a.z-b.z;});
+ for(i=0;i<pts.length;i++){var q=pts[i];var dz=(q.z+1)/2;var rad=4+4*dz;
+  ctx.globalAlpha=0.5+0.5*dz;ctx.beginPath();ctx.arc(q.x,q.y,rad,0,TAU);ctx.fillStyle=COL[q.p.s];ctx.fill();
+  if(dz>0.4){ctx.fillStyle='#fff';ctx.font='600 '+Math.round(7+3*dz)+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(''+q.p.n,q.x,q.y);}}
+ ctx.globalAlpha=1;ctx.textBaseline='alphabetic';
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';
+ for(s=0;s<4;s++){ctx.fillStyle=COL[s];ctx.fillText('● '+SHN[s],10,16+s*14);}
+ ctx.fillStyle=d?'#888780':'#9A9A93';ctx.textAlign='right';ctx.fillText('оранжевые тропы = феромоны переходов',W-10,16);ctx.textAlign='start';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.015);
+ if(run){acc+=dt;var iv=3.4-spd*0.4;if(acc>=iv){acc=0;beat();}
+  if(!drag)A+=dt*0.15;}
+ for(var i=0;i<P.length;i++){var p=P[i];p.th+=dt*(0.3-p.s*0.05);p.rr+=(SH[p.s]-p.rr)*dt*2.2;}
+ for(var k in trail)trail[k]*=Math.pow(0.94,dt*2);
+ draw();var e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';
+ requestAnimationFrame(loop);}
+var cv=document.getElementById('mrd-c');
+cv.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;cv.style.cursor='grabbing';});
+window.addEventListener('pointermove',function(e){if(!drag)return;A+=(e.clientX-px)*0.008;tilt=Math.max(-1.2,Math.min(1.2,tilt+(e.clientY-py)*0.008));px=e.clientX;py=e.clientY;});
+window.addEventListener('pointerup',function(){drag=false;cv.style.cursor='grab';});
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ такты':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

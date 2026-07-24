@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Семантический рой</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:430px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.65;color:var(--text-secondary)}.log b{color:var(--text-primary);font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.leg{font-size:12px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Семантический рой</div>
+<div class="sub">рой слов-агентов: каждое слово САМО ищет родню по теме и решает — слиться в обобщение (⚛, к центру), раздробиться в конкретику (✂, к краю) или жить на своём кольце. Все решения видны в журнале — как MiroFish, но графически и на смысле</div>
+<canvas id="mrd-c"></canvas>
+<div class="leg"><span>радиус = уровень обобщённости (центр «нечто» ↔ край буквы)</span><span>цвет = тема</span></div>
+<div class="panel"><h3>Журнал решений роя (кто, почему, что сделал)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ рой живёт</button><button class="btn" id="mrd-reset">↻ заново</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label></div>
+<div class="row"><span style="color:var(--text-secondary)">склонность роя:</span><span>дробить</span>
+<input id="mrd-bias" type="range" min="0" max="1" step="0.05" value="0.5" style="flex:1"><span>обобщать</span></div>
+<div class="note">Правила каждого агента: (1) вижу соседа СВОЕЙ темы близкого уровня → сближаюсь и сливаюсь в гипероним (lv+1, к центру); оба на пределе → «НЕЧТО» (коллапс). (2) вокруг нет родни, а я абстрактен → дроблюсь на конкретику (lv−1, к краю); внизу — рассыпаюсь на буквы (шум). (3) иначе живу на кольце своего уровня. Ползунок — не команда, а склонность: решает каждый сам. Файл: prototype/p52-semantic-swarm.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var W5={
+ 'г':[['дом','двор'],['улица','мост'],['город','квартал'],['поселение','столица'],['место']],
+ 'д':[['шаг','толчок'],['путь','бег'],['поток','поездка'],['движение','маршрут'],['процесс']],
+ 'с':[['искра','блик'],['луч','огонёк'],['свет','заря'],['сияние','пламя'],['энергия']],
+ 'м':[['буква','знак'],['слово','фраза'],['мысль','образ'],['идея','понятие'],['смысл']],
+ 'в':[['миг','тик'],['час','срок'],['день','пора'],['время','эпоха'],['вечность']],
+ 'п':[['семя','капля'],['лист','ручей'],['ветвь','река'],['дерево','сад'],['природа']]};
+var THS=['г','д','с','м','в','п'];
+function pickW(th,lv){var a=W5[th][Math.max(0,Math.min(4,lv))];return a[Math.floor(Math.random()*a.length)];}
+var P=[],parts=[],logL=[],run=true,bias=0.5,spd=3,acc=0,last=0,Wc=640,Hc=430;
+function rOf(lv){return 0.95-0.19*lv;} // lv0 край … lv4 центр-близко
+function spawn(th,lv,ang,w){var p={th:th,lv:lv,w:w||pickW(th,lv),ang:(ang!=null?ang:Math.random()*6.283),rr:rOf(lv),tr:rOf(lv),intent:'ring',mate:null,nech:false};P.push(p);return p;}
+function reset(){P=[];parts=[];logL=[];for(var i=0;i<16;i++){spawn(THS[i%6],1+Math.floor(Math.random()*2));}}
+function addLog(s){logL.unshift(s);if(logL.length>6)logL.pop();}
+function dist(a,b){var dx=Math.cos(a.ang)*a.rr-Math.cos(b.ang)*b.rr,dy=Math.sin(a.ang)*a.rr-Math.sin(b.ang)*b.rr;return Math.sqrt(dx*dx+dy*dy);}
+function think(){var cnt=P.length;var mprob=0.25+bias*0.55, sprob=0.25+(1-bias)*0.55;
+ if(cnt>26)mprob+=0.25;if(cnt<8)sprob+=0.3;
+ for(var i=0;i<P.length;i++){var p=P[i];if(p.nech){p.intent='center';continue;}
+  // личный поиск родни
+  var mate=null,bd=1e9;
+  for(var j=0;j<P.length;j++){if(i===j)continue;var q=P[j];if(q.nech)continue;
+   if(q.th===p.th&&Math.abs(q.lv-p.lv)<=1){var d=dist(p,q);if(d<bd){bd=d;mate=q;}}}
+  if(mate&&bd<0.75&&p.lv<5&&Math.random()<mprob){p.intent='merge';p.mate=mate;}
+  else if(!mate&&p.lv>=1&&Math.random()<sprob){p.intent='split';}
+  else if(!mate&&p.lv===0&&Math.random()<sprob*0.5){p.intent='dust';}
+  else {p.intent='ring';p.mate=null;}}}
+function act(){var done={};
+ for(var i=P.length-1;i>=0;i--){var p=P[i];if(done[i])continue;
+  if(p.intent==='merge'&&p.mate){var j=P.indexOf(p.mate);if(j<0||done[j])continue;
+   if(dist(p,p.mate)<0.16){var a=p,b=p.mate;done[i]=done[j]=true;
+    var lv=Math.max(a.lv,b.lv)+1;var na=(a.ang+b.ang)/2;
+    P.splice(Math.max(i,j),1);P.splice(Math.min(i,j),1);
+    if(lv>4){var n=spawn(a.th,4,na,'НЕЧТО');n.nech=true;n.tr=0.06;addLog('⚛ <b>'+a.w+'</b> + <b>'+b.w+'</b> → <b>НЕЧТО</b> — предел обобщения (коллапс)');FX.blip(150,0.06,'sawtooth');}
+    else{var w=pickW(a.th,lv);spawn(a.th,lv,na,w);addLog('⚛ <b>'+a.w+'</b> + <b>'+b.w+'</b> → <b>'+w+'</b> (тема та же, уровень '+lv+', к центру)');FX.chord([392,523],0.04);}}}
+  else if(p.intent==='split'){done[i]=true;P.splice(i,1);var w1=pickW(p.th,p.lv-1),w2=pickW(p.th,p.lv-1);
+   spawn(p.th,p.lv-1,p.ang+0.25,w1);spawn(p.th,p.lv-1,p.ang-0.25,w2);
+   addLog('✂ <b>'+p.w+'</b> → <b>'+w1+'</b> + <b>'+w2+'</b> (нет родни рядом — в конкретику, к краю)');FX.blip(320,0.04);}
+  else if(p.intent==='dust'){done[i]=true;P.splice(i,1);var ls=p.w.split('');
+   for(var k=0;k<ls.length;k++)parts.push({ang:p.ang+(Math.random()-0.5)*0.5,rr:p.rr+Math.random()*0.15,ch:ls[k],life:1});
+   addLog('· <b>'+p.w+'</b> рассыпалось на буквы — дно дробления (шум)');FX.blip(120,0.05,'sawtooth');}}
+ if(P.length===0){addLog('рой пуст — новое семя');for(var s=0;s<6;s++)spawn(THS[s],1);}}
+function move(dt){for(var i=0;i<P.length;i++){var p=P[i];
+  if(p.intent==='merge'&&p.mate&&P.indexOf(p.mate)>=0){var m=p.mate;var da=((m.ang-p.ang+Math.PI*3)%(Math.PI*2))-Math.PI;p.ang+=da*dt*1.6;p.rr+=(m.rr-p.rr)*dt*1.6;}
+  else{p.tr=p.nech?0.06:rOf(p.lv);p.rr+=(p.tr-p.rr)*dt*2.2;p.ang+=dt*(0.14+0.05*(p.lv%3));}}
+ for(i=parts.length-1;i>=0;i--){var q=parts[i];q.rr+=dt*0.12;q.life-=dt*0.6;if(q.life<=0)parts.splice(i,1);}}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||430;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-24;
+ // кольца уровней
+ for(var lv=0;lv<=4;lv++){ctx.strokeStyle=d?'#33333a':'#e6e4da';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,rOf(lv)*R,0,6.283);ctx.stroke();}
+ ctx.fillStyle='#7F77DD';ctx.globalAlpha=0.10;ctx.beginPath();ctx.arc(cx,cy,0.14*R,0,6.283);ctx.fill();ctx.globalAlpha=1;
+ // связи merge-намерений
+ for(var i=0;i<P.length;i++){var p=P[i];if(p.intent==='merge'&&p.mate&&P.indexOf(p.mate)>=0){var m=p.mate;
+  ctx.strokeStyle=THC[p.th];ctx.globalAlpha=0.4;ctx.lineWidth=1.5;ctx.beginPath();
+  ctx.moveTo(cx+Math.cos(p.ang)*p.rr*R,cy+Math.sin(p.ang)*p.rr*R);ctx.lineTo(cx+Math.cos(m.ang)*m.rr*R,cy+Math.sin(m.ang)*m.rr*R);ctx.stroke();ctx.globalAlpha=1;}}
+ // буквы-пыль
+ for(i=0;i<parts.length;i++){var q=parts[i];ctx.globalAlpha=Math.max(0,q.life);ctx.fillStyle='#D85A30';ctx.font='11px system-ui';ctx.textAlign='center';
+  ctx.fillText(q.ch,cx+Math.cos(q.ang)*q.rr*R,cy+Math.sin(q.ang)*q.rr*R);}ctx.globalAlpha=1;
+ // слова
+ for(i=0;i<P.length;i++){p=P[i];var x=cx+Math.cos(p.ang)*p.rr*R,y=cy+Math.sin(p.ang)*p.rr*R;
+  var rad=p.nech?11:(6+p.lv*1.4);ctx.beginPath();ctx.arc(x,y,rad,0,6.283);ctx.fillStyle=p.nech?'#7F77DD':THC[p.th];ctx.fill();
+  if(p.intent==='split'){ctx.strokeStyle='#D85A30';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,rad+3,0,6.283);ctx.stroke();}
+  ctx.fillStyle=uic;ctx.font=(p.nech?'600 12px':'11px')+' system-ui';ctx.textAlign='center';ctx.fillText(p.w,x,y-rad-4);}
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText('центр = обобщение («нечто»)',10,18);ctx.textAlign='right';ctx.fillText('край = дробление (буквы)',W-10,18);
+ ctx.textAlign='left';ctx.fillStyle=d?'#888780':'#9A9A93';ctx.fillText('слов: '+P.length,10,H-10);ctx.textAlign='start';}
+function render(){draw();var e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'<span style="color:var(--text-muted)">рой думает…</span>';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var s=0;for(var i=0;i<P.length;i++)s+=P[i].lv;var lam=P.length?Math.max(0.02,Math.min(0.98,(s/P.length+0.5)/5)):0.5;
+ FX.ambient(0.018*4*lam*(1-lam));FX.freq(110+lam*150);
+ if(run){acc+=dt;var iv=1.5-spd*0.18;if(acc>=iv){acc=0;think();act();}}
+ move(dt);render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ рой живёт':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-bias').oninput=function(){bias=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

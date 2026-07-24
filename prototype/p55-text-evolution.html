@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Эволюция текста (2-opt + рационализация)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:250px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+#mrd-j{display:block;width:100%;height:90px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.65;color:var(--text-secondary)}.log b{color:var(--text-primary);font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Эволюция текста</div>
+<div class="sub">рой-редакторы пересобирают рассказ алгоритмами из вашей Knowledge System (data7): 2-opt переставляет фразы (TSP: минимум когнитивной дистанции = максимум связности), рационализация удаляет редундант ТОЛЬКО с сохранением информации, рост добавляет новое. Отжиг: сначала смелые правки, потом точные</div>
+<canvas id="mrd-c"></canvas>
+<canvas id="mrd-j"></canvas>
+<div class="panel"><h3>Журнал правок роя</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ эволюция</button><button class="btn" id="mrd-step">шаг</button><button class="btn" id="mrd-reset">↻ заново</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="8" step="1" value="4"></label></div>
+<div class="note">Цель J = 0.5·связность цепи + 0.2·M(λ) + 0.15·разнообразие тем − 0.15·редундантность. Операторы: 2-opt (перестановка), рационализация (удаление дубля, если покрытие тем не падает — правило «I(K′) ≥ (1−ε)·I(K)» из data7), рост (вставка из пула, если J↑). Отжиг: T падает, случайные ухудшения принимаются всё реже. Толщина связей = связность соседних фраз. Файл: prototype/p55-text-evolution.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+// фразы: text, темы, λ, grp (группа редундантности)
+var POOL=[
+ {t:'тёмная улица молчит',tg:['г','с','в'],lam:0.42,grp:1},
+ {t:'город дышит вечером',tg:['г','п','в'],lam:0.45,grp:2},
+ {t:'город дышит тихо',tg:['г','п','в'],lam:0.45,grp:2},
+ {t:'поезд ведёт на окраину',tg:['г','д'],lam:0.35,grp:3},
+ {t:'путь кружит быстро',tg:['д'],lam:0.4,grp:4},
+ {t:'свет горит ярко',tg:['с'],lam:0.4,grp:5},
+ {t:'свет горит ясно',tg:['с','м'],lam:0.45,grp:5},
+ {t:'заря течёт над рекой',tg:['с','п','д'],lam:0.45,grp:6},
+ {t:'река дышит тихо',tg:['п','в'],lam:0.45,grp:7},
+ {t:'сад молчит вечно',tg:['п','в'],lam:0.55,grp:8},
+ {t:'мысль ищет слово',tg:['м'],lam:0.65,grp:9},
+ {t:'идея рождает смысл',tg:['м'],lam:0.7,grp:10},
+ {t:'время течёт медленно',tg:['в','д'],lam:0.6,grp:11},
+ {t:'тишина ведёт мысль',tg:['в','м'],lam:0.6,grp:12}
+];
+function cos(a,b){var sh=0;for(var i=0;i<a.length;i++)if(b.indexOf(a[i])>=0)sh++;return a.length&&b.length?sh/Math.sqrt(a.length*b.length):0;}
+var story=[],hist=[],logL=[],run=true,spd=4,acc=0,last=0,T=1,step=0,J0=0;
+function J(st){if(st.length<2)return 0;
+ var co=0;for(var i=0;i<st.length-1;i++)co+=cos(st[i].tg,st[i+1].tg);co/=(st.length-1);
+ var s=0;for(i=0;i<st.length;i++)s+=st[i].lam;var lam=s/st.length;var M=4*lam*(1-lam);
+ var th={};for(i=0;i<st.length;i++)for(var j=0;j<st[i].tg.length;j++)th[st[i].tg[j]]=1;var vr=Object.keys(th).length/6;
+ var seen={},red=0;for(i=0;i<st.length;i++){if(seen[st[i].grp])red++;seen[st[i].grp]=1;}red/=st.length;
+ return 0.5*co+0.2*M+0.15*vr-0.15*red;}
+function themeSet(st){var th={};for(var i=0;i<st.length;i++)for(var j=0;j<st[i].tg.length;j++)th[st[i].tg[j]]=1;return Object.keys(th).sort().join('');}
+function reset(){story=[];var idx=[0,2,4,6,5,8,10,12];for(var i=0;i<idx.length;i++)story.push(POOL[idx[i]]);
+ // перемешать
+ for(i=story.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=story[i];story[i]=story[j];story[j]=t;}
+ hist=[J(story)];J0=hist[0];logL=[];T=1;step=0;addLog('старт: J='+J0.toFixed(3)+' · '+story.length+' фраз (есть дубли и разрывы)');}
+function addLog(s){logL.unshift(s);if(logL.length>6)logL.pop();}
+function accept(dJ){return dJ>0||Math.random()<Math.exp(dJ/(0.08*T+0.005));}
+function tickOp(){step++;T=Math.max(0.02,1-step/70);var r=Math.random();var jb=J(story);var ok=false;
+ if(r<0.45&&story.length>=3){ // 2-opt
+  var i=Math.floor(Math.random()*story.length),j=Math.floor(Math.random()*story.length);if(i===j)return;
+  var st2=story.slice();var t=st2[i];st2[i]=st2[j];st2[j]=t;var dJ=J(st2)-jb;
+  if(accept(dJ)){story=st2;ok=true;addLog((dJ>0?'✔':'≈')+' <b>2-opt</b>: фразы '+(Math.min(i,j)+1)+'↔'+(Math.max(i,j)+1)+' · ΔJ='+(dJ>=0?'+':'')+dJ.toFixed(3)+(dJ<=0?' (отжиг, T='+T.toFixed(2)+')':''));}
+ }else if(r<0.72&&story.length>4){ // рационализация
+  var seen={},di=-1;for(var k=0;k<story.length;k++){if(seen[story[k].grp]){di=k;break;}seen[story[k].grp]=1;}
+  if(di<0){return;}
+  var st3=story.slice();st3.splice(di,1);
+  if(themeSet(st3)!==themeSet(story)){addLog('✋ рационализация отклонена: удаление «'+story[di].t+'» теряет тему (I < (1−ε)·I)');return;}
+  var dJ3=J(st3)-jb;
+  if(accept(dJ3)){addLog('✂ <b>рационализация</b>: дубль «'+story[di].t+'» удалён, темы сохранены 100% · ΔJ='+(dJ3>=0?'+':'')+dJ3.toFixed(3));story=st3;ok=true;}
+ }else if(story.length<9){ // рост
+  var cand=POOL[Math.floor(Math.random()*POOL.length)];var has=false;for(k=0;k<story.length;k++)if(story[k].t===cand.t)has=true;
+  if(has)return;
+  var bi=0,bJ=-1e9;for(var p=0;p<=story.length;p++){var st4=story.slice();st4.splice(p,0,cand);var jj=J(st4);if(jj>bJ){bJ=jj;bi=p;}}
+  var dJ4=bJ-jb;
+  if(dJ4>0){var st5=story.slice();st5.splice(bi,0,cand);story=st5;ok=true;addLog('🌱 <b>рост</b>: вставлена «'+cand.t+'» на позицию '+(bi+1)+' · ΔJ=+'+dJ4.toFixed(3));}}
+ if(ok){FX.blip(400+J(story)*300,0.03);}
+ hist.push(J(story));if(hist.length>160)hist.shift();}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||250;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var n=story.length;if(!n)return;
+ var cols=Math.min(3,n),rows=Math.ceil(n/cols);var cw=(W-40)/cols,chh=Math.min(56,(H-50)/rows);
+ var PXY=[];for(var i=0;i<n;i++){var col=i%cols,row=Math.floor(i/cols);var x=20+col*cw+cw/2,y=34+row*chh+chh/2;
+  if(row%2===1)x=20+(cols-1-col)*cw+cw/2; // змейка
+  PXY.push([x,y]);}
+ // связи
+ for(i=0;i<n-1;i++){var co=cos(story[i].tg,story[i+1].tg);
+  ctx.strokeStyle=co>0?'#1D9E75':'#D85A30';ctx.lineWidth=Math.max(1,co*5);ctx.globalAlpha=co>0?0.6:0.35;
+  ctx.beginPath();ctx.moveTo(PXY[i][0],PXY[i][1]);ctx.lineTo(PXY[i+1][0],PXY[i+1][1]);ctx.stroke();ctx.globalAlpha=1;}
+ // карточки
+ for(i=0;i<n;i++){var p=story[i];var x=PXY[i][0],y=PXY[i][1];var tw=Math.min(cw-12,p.t.length*6.4+16);
+  ctx.fillStyle=d?'#26262B':'#fff';ctx.strokeStyle=THC[p.tg[0]]||'#888780';ctx.lineWidth=1.5;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x-tw/2,y-14,tw,28,8);else ctx.rect(x-tw/2,y-14,tw,28);ctx.fill();ctx.stroke();
+  ctx.fillStyle=uic;ctx.font='10.5px system-ui';ctx.textAlign='center';ctx.fillText((i+1)+'. '+p.t,x,y+3,tw-8);}
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';
+ ctx.fillText('рассказ: '+n+' фраз · J='+J(story).toFixed(3)+' (старт '+J0.toFixed(3)+') · T='+T.toFixed(2),10,16);ctx.textAlign='start';}
+function drawJ(){var c=document.getElementById('mrd-j');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||90;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';if(hist.length<2)return;
+ var mn=1e9,mx=-1e9;for(var i=0;i<hist.length;i++){if(hist[i]<mn)mn=hist[i];if(hist[i]>mx)mx=hist[i];}
+ if(mx-mn<0.02)mx=mn+0.02;
+ ctx.strokeStyle='#1D9E75';ctx.lineWidth=2;ctx.beginPath();
+ for(i=0;i<hist.length;i++){var x=14+(W-28)*i/(hist.length-1);var y=H-12-(hist[i]-mn)/(mx-mn)*(H-28);
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('J(шаги) — качество рассказа растёт правками роя',10,14);ctx.textAlign='start';}
+function render(){draw();drawJ();var e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.014);
+ if(run){acc+=dt;var iv=1.1-spd*0.12;if(acc>=iv){acc=0;tickOp();}}
+ render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ эволюция':'⏸ пауза';this.className='btn'+(run?' on':'');};
+$('mrd-step').onclick=function(){run=false;$('mrd-run').textContent='▶ эволюция';$('mrd-run').className='btn';tickOp();};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',render);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

@@ -1,0 +1,53 @@
+.semanticFlowView{display:grid;gap:8px;min-width:0;margin-top:10px;padding-top:9px;border-top:1px solid rgba(153,165,184,.18)}
+.semanticFlowHead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.semanticFlowHead h3{margin:0;font-size:13px;line-height:1.2;letter-spacing:0}
+.semanticFlowStatus{min-width:0;color:var(--warn);font:700 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;text-align:right}
+.semanticFlowView.is-review-queue .semanticFlowStatus{color:var(--water)}
+.semanticFlowView.is-abstain .semanticFlowStatus,.semanticFlowView.is-invalid .semanticFlowStatus{color:var(--edge)}
+.semanticFlowOrbit{position:relative;width:100%;height:238px;min-width:0;overflow:hidden}
+.semanticFlowTrack{position:absolute;inset:24px 50px 25px;border:1px dashed rgba(47,131,202,.48);border-radius:50%}
+.semanticFlowTrack:after{content:"";position:absolute;inset:18%;border:1px solid rgba(215,200,111,.24);border-radius:50%}
+.semanticFlowCenter{position:absolute;z-index:1;left:50%;top:50%;width:102px;height:66px;transform:translate(-50%,-50%);display:grid;place-content:center;text-align:center;border-left:3px solid var(--warn);background:var(--panel);padding:5px}
+.semanticFlowCenter b{font:800 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--warn)}
+.semanticFlowCenter span{margin-top:4px;color:var(--muted);font-size:10px}
+.semanticFlowNodes{position:absolute;inset:0}
+.semanticFlowNode{position:absolute;z-index:2;width:86px;height:53px;display:grid;grid-template-columns:18px minmax(0,1fr);grid-template-rows:1fr auto;gap:1px 5px;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:5px;overflow:hidden}
+.semanticFlowNode.position-0{left:50%;top:2px;transform:translateX(-50%)}
+.semanticFlowNode.position-1{right:1px;top:50%;transform:translateY(-50%)}
+.semanticFlowNode.position-2{right:12%;bottom:1px}
+.semanticFlowNode.position-3{left:12%;bottom:1px}
+.semanticFlowNode.position-4{left:1px;top:50%;transform:translateY(-50%)}
+.semanticFlowNode b{min-width:0;font-size:10px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.semanticFlowNode small{grid-column:1/-1;min-width:0;color:var(--muted);font:8px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.semanticFlowOrdinal{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:rgba(153,165,184,.13);color:var(--muted);font-size:9px;font-weight:800}
+.semanticFlowNode.state-shipped{border-color:rgba(21,151,132,.55)}
+.semanticFlowNode.state-shipped .semanticFlowOrdinal{background:rgba(21,151,132,.2);color:#80ddcf}
+.semanticFlowNode.state-parked{border-color:rgba(226,161,43,.52)}
+.semanticFlowNode.state-parked .semanticFlowOrdinal{background:rgba(226,161,43,.18);color:var(--warn)}
+.semanticFlowNode.state-inflight{border-color:rgba(47,131,202,.58)}
+.semanticFlowNode.state-discarded{border-color:rgba(216,81,63,.58)}
+.semanticFlowMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;min-width:0}
+.semanticFlowMetric{min-width:0;border-left:2px solid rgba(153,165,184,.2);padding:3px 5px;background:rgba(255,255,255,.018)}
+.semanticFlowMetric span,.semanticFlowMetric b{display:block;min-width:0;overflow-wrap:anywhere}
+.semanticFlowMetric span{color:var(--muted);font-size:9px;line-height:1.2}
+.semanticFlowMetric b{margin-top:2px;font:750 12px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.semanticFlowMetric.is-statistic{border-left-color:rgba(215,200,111,.48)}
+.semanticFlowRelations{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.semanticFlowRelation{min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;color:var(--muted);font-size:10px}
+.semanticFlowRelation i{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:9px;font-weight:850;background:rgba(153,165,184,.13)}
+.semanticFlowRelation b{font-variant-numeric:tabular-nums}
+.semanticFlowRelation.relation-supports i{color:#80ddcf;background:rgba(21,151,132,.18)}
+.semanticFlowRelation.relation-refutes i{color:#ffad9f;background:rgba(216,81,63,.18)}
+.semanticFlowRelation.relation-qualifies i{color:var(--warn);background:rgba(226,161,43,.16)}
+.semanticFlowRelation.relation-mentions i{color:#80bff0;background:rgba(47,131,202,.16)}
+.semanticFlowBoundary{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-left:3px solid var(--warn);padding:5px 7px;background:rgba(226,161,43,.07)}
+.semanticFlowBoundary b{color:var(--warn);font:800 10px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.semanticFlowBoundary span{min-width:0;color:var(--muted);font-size:9px;text-align:right;overflow-wrap:anywhere}
+.semanticFlowInvalid{border-left:3px solid var(--edge);padding:6px 7px;color:var(--edge);font:750 10px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace}
+@media (max-width:360px){
+  .semanticFlowOrbit{height:226px}
+  .semanticFlowTrack{inset:25px 42px}
+  .semanticFlowNode{width:80px;grid-template-columns:16px minmax(0,1fr);gap:1px 3px;padding:4px}
+  .semanticFlowNode.position-2{right:8%}.semanticFlowNode.position-3{left:8%}
+  .semanticFlowMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

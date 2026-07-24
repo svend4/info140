@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Арифметический рой</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:420px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.calc{font-family:var(--mono);font-size:13px;margin:2px 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex-wrap:wrap}.seg button{border:0;background:var(--surface-2);color:var(--text-secondary);padding:6px 10px;font-size:12px;cursor:pointer}.seg button.on{background:#1D9E75;color:#fff}
+.leg{font-size:12px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:3px}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Арифметический рой</div>
+<div class="sub">каждая точка со СВОИМ числом сама считает и выбирает: в центр (обобщение), на край (дробление) или по кругу (живая зона). Не общий ветер, а личное решение — это шаг к рою-решателю (как MiroFish, но графически и на математике)</div>
+<canvas id="mrd-c"></canvas>
+<div class="leg"><span><span class="dot" style="background:#7F77DD"></span>центр · обобщение (n больше / делитель)</span><span><span class="dot" style="background:#1D9E75"></span>круг · живая зона (равно / диагональ)</span><span><span class="dot" style="background:#D85A30"></span>край · дробление (n меньше / не делит)</span></div>
+<div class="row"><span style="color:var(--text-secondary)">правило:</span>
+<div class="seg" id="mrd-mode"><button data-m="cmp" class="on">сравнение с целью</button><button data-m="par">чёт·нечёт (n×такт)</button><button data-m="div">делимость (n | P)</button></div></div>
+<div class="panel"><h3 id="mrd-rh">Условие</h3><div id="mrd-rule" style="font-size:15px;font-weight:600"></div>
+<div id="mrd-ex" style="margin-top:5px"></div>
+<div id="mrd-cnt" style="margin-top:5px;color:var(--text-secondary)"></div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ такт</button><button class="btn" id="mrd-step">шаг такта</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>скорость <input id="mrd-spd" type="range" min="1" max="6" step="1" value="2"></label></div>
+<div class="note">«Такт» меняет цель — и рой пересортировывается: видно, как разные числа принимают разные решения по одной и той же арифметике. Дальше на месте чисел встанут слова, а сравнение/деление станут семантическим слиянием/дроблением. Файл: prototype/p51-arithmetic-swarm.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var COL={c:'#7F77DD',r:'#1D9E75',e:'#D85A30'};
+var P=[];for(var i=0;i<24;i++)P.push({n:(i%12)+1,ang:i/24*Math.PI*2,rr:0.6,tr:0.6,dec:'r'});
+var MODES={
+ cmp:{name:'сравнение с целью',vals:[2,3,4,5,6,7,8,9,10,11],vi:0,rule:function(v){return 'если n > '+v+' → центр · n = '+v+' → круг · n < '+v+' → край';},
+  decide:function(n,v){return n>v?'c':n<v?'e':'r';},ex:function(n,v){return n+(n>v?' > ':n<v?' < ':' = ')+v+' → '+({c:'центр',r:'круг',e:'край'})[n>v?'c':n<v?'e':'r'];}},
+ par:{name:'чёт·нечёт произведения',vals:[2,3,4,5,6,7,8,9],vi:0,rule:function(v){return 'такт b='+v+': n×b чётное → центр · n=b → круг · нечётное → край';},
+  decide:function(n,v){return n===v?'r':((n*v)%2===0?'c':'e');},ex:function(n,v){var d=n===v?'r':((n*v)%2===0?'c':'e');return n+'×'+v+'='+(n*v)+' → '+({c:'чёт·центр',r:'диагональ·круг',e:'нечёт·край'})[d];}},
+ div:{name:'делимость цели P',vals:[12,18,24,36],vi:0,rule:function(v){return 'P='+v+': n делит P → центр (делитель) · n=P → круг · иначе → край';},
+  decide:function(n,v){return n===v?'r':(v%n===0?'c':'e');},ex:function(n,v){var d=n===v?'r':(v%n===0?'c':'e');return v+' % '+n+' = '+(v%n)+' → '+({c:'делитель·центр',r:'круг',e:'не делит·край'})[d];}}
+};
+var mode='cmp',run=true,spd=2,acc=0,last=0;
+function M(){return MODES[mode];}
+function val(){return M().vals[M().vi];}
+function beat(){M().vi=(M().vi+1)%M().vals.length;FX.blip(300+val()*10,0.04);}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||420;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-26;var v=val();
+ // зоны
+ ctx.fillStyle='#7F77DD';ctx.globalAlpha=0.09;ctx.beginPath();ctx.arc(cx,cy,R*0.28,0,6.283);ctx.fill();
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.08;ctx.beginPath();ctx.arc(cx,cy,R*0.75,0,6.283);ctx.fill();ctx.fillStyle=d?'#1F1F23':'#FFFFFF';ctx.beginPath();ctx.arc(cx,cy,R*0.45,0,6.283);ctx.fill();
+ ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#3a3a3f':'#e2e0d8';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,R*0.6,0,6.283);ctx.stroke();
+ // цель в центре
+ ctx.fillStyle=uic;ctx.textAlign='center';ctx.font='600 22px system-ui';ctx.fillText(''+v,cx,cy+8);ctx.font='10px system-ui';ctx.fillStyle=d?'#888780':'#9A9A93';ctx.fillText(mode==='par'?'такт b':mode==='div'?'цель P':'цель T',cx,cy+22);
+ // точки
+ for(var i=0;i<P.length;i++){var p=P[i];var rad=p.rr*R;var x=cx+Math.cos(p.ang)*rad,y=cy+Math.sin(p.ang)*rad;
+  ctx.beginPath();ctx.arc(x,y,13,0,6.283);ctx.fillStyle=COL[p.dec];ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='600 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(''+p.n,x,y);}
+ ctx.textBaseline='alphabetic';ctx.textAlign='left';
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText('центр = обобщение',10,18);ctx.textAlign='right';ctx.fillText('край = дробление',W-10,18);ctx.textAlign='start';}
+function update(dt){var v=val();var cc=0,cr=0,ce=0;
+ for(var i=0;i<P.length;i++){var p=P[i];p.dec=M().decide(p.n,v);p.tr=p.dec==='c'?0.16:p.dec==='e'?0.95:0.6;p.rr+=(p.tr-p.rr)*Math.min(1,dt*3);
+  var w=p.dec==='c'?0.6:p.dec==='e'?0.1:0.3;p.ang+=w*dt;if(p.dec==='c')cc++;else if(p.dec==='r')cr++;else ce++;}
+ window._cnt=[cc,cr,ce];}
+function panel(){var v=val();document.getElementById('mrd-rh').textContent='Условие · '+M().name;
+ document.getElementById('mrd-rule').textContent=M().rule(v);
+ var ex='';[3,7,10].forEach(function(n){ex+='<div class="calc">'+M().ex(n,v)+'</div>';});
+ document.getElementById('mrd-ex').innerHTML=ex;
+ var c=window._cnt||[0,0,0];document.getElementById('mrd-cnt').innerHTML='в центре: <b style="color:#7F77DD">'+c[0]+'</b> · на круге: <b style="color:#1D9E75">'+c[1]+'</b> · на краю: <b style="color:#D85A30">'+c[2]+'</b>';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;FX.ambient(0.015);
+ if(run){acc+=dt;if(acc>=(1.8-spd*0.22)){acc=0;beat();}}update(dt);draw();panel();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+var mm=$('mrd-mode').children;for(i=0;i<mm.length;i++)mm[i].onclick=function(){mode=this.getAttribute('data-m');var ch=$('mrd-mode').children;for(var j=0;j<ch.length;j++)ch[j].className=(ch[j]===this)?'on':'';};
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ такт':'⏸ такт';this.className='btn'+(run?' on':'');};
+$('mrd-step').onclick=function(){run=false;$('mrd-run').textContent='▶ такт';$('mrd-run').className='btn';beat();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);requestAnimationFrame(loop);
+})();
+</script></body></html>

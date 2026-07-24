@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Транспорт слов: тезаурус (обобщение/дробление)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-arc{display:block;width:100%;height:74px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+#mrd-lad{display:block;width:100%;height:340px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);margin-top:10px}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.cur{font-size:22px;font-weight:600}
+.cand{display:flex;align-items:center;gap:8px;margin:2px 0}.cand .w{min-width:90px}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;flex:1;max-width:240px}.bar>i{display:block;height:100%;background:#1D9E75}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 13px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}.btn:disabled{opacity:.4;cursor:default}
+.tab{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:7px;padding:4px 10px;font-size:12px}.tab.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1)}
+.log{font-size:13px;color:var(--text-secondary);line-height:1.7}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Тезаурус: обобщение ↔ дробление</div>
+<div class="sub">шаг 3: рычаг прямо на слове. ▲ обобщить — вверх к одному ядру (коллапс); ▼ дробить — вниз к буквам/звукам (шум). Оба конца = редукция; жизнь — в средних ступенях</div>
+<canvas id="mrd-arc"></canvas>
+<canvas id="mrd-lad"></canvas>
+<div class="row" id="mrd-tabs"></div>
+<div class="panel"><h3>Текущее слово / состояние</h3><div class="cur" id="mrd-cur">—</div><div id="mrd-state" style="margin-top:4px"></div></div>
+<div class="panel"><h3>Показатели</h3><div id="mrd-metr">—</div></div>
+<div class="panel"><h3>След движения (лестница абстракции)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row">
+<button class="btn" id="mrd-up">▲ обобщить</button>
+<button class="btn" id="mrd-down">▼ дробить</button>
+<button class="btn" id="mrd-auto">↻ авто-маятник</button>
+<label>скорость <input id="mrd-spd" type="range" min="1" max="8" step="1" value="2"></label>
+<button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="note">Лестница абстракции: верх — «нечто» (одно всеобщее ядро, λ→1, коллапс: больше нельзя обобщать — движение кончается); низ — атомизация слова на буквы/звуки (λ→0, шум: больше нельзя дробить — тоже конец). ▲ и ▼ — это и есть «рычаг смысла» на одном слове. «Авто-маятник» показывает движение по кругу и оба тупика. Накопление (рост смысла, а не редукция) — отдельная гуманитарная формула, считается в docs/12. Файл: prototype/p33-word-transport-thesaurus.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+function colLv(lv){return RAMP[Math.max(0,Math.min(5,5-Math.round(lv)))];}
+// лестницы: сверху (обобщение/нечто) вниз к конкретному; ниже — атомизация
+var LAD=[
+ {n:'животное',r:[['нечто',5.0],['существо',4.3],['животное',3.5],['собака',2.3],['такса',1.3]]},
+ {n:'растение',r:[['нечто',5.0],['организм',4.3],['растение',3.5],['цветок',2.3],['роза',1.3]]},
+ {n:'предмет', r:[['нечто',5.0],['объект',4.3],['вещь',3.5],['инструмент',2.3],['молоток',1.3]]},
+ {n:'место',   r:[['нечто',5.0],['пространство',4.3],['место',3.5],['поселение',2.3],['город',1.3]]},
+ {n:'чувство', r:[['нечто',5.0],['состояние',4.2],['чувство',3.4],['радость',2.2]]}
+];
+var li=0,pos=2,dir=1,auto=false,spd=2,acc=0,last=0,path=[],hold=0;
+function R(){return LAD[li].r;}
+function atoms(){var w=R()[R().length-1][0];return w.split('').join(' · ');}
+function isCol(){return pos===0;}
+function isNoise(){return pos===R().length;}
+function lvAt(){return pos<R().length?R()[pos][1]:0.2;}
+function lamAt(){return pos<R().length?Math.max(0.03,Math.min(0.99,R()[pos][1]/5)):0.04;}
+function curWord(){return pos<R().length?R()[pos][0]:'А Т О М Ы';}
+function pushlog(){var w=pos<R().length?R()[pos][0]:'атомы('+atoms()+')';path.unshift(w);if(path.length>10)path.pop();}
+function move(d){var np=pos+d;if(np<0||np>R().length)return false;pos=np;pushlog();
+ if(isCol()){FX.blip(160,0.05,'sawtooth');}else if(isNoise()){FX.blip(120,0.05,'sawtooth');}else{FX.chord([392,494,587],0.04);}return true;}
+function setLad(k){li=k;pos=Math.min(2,R().length-1);dir=1;path=[];pushlog();}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function arc(){var c=document.getElementById('mrd-arc');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||74;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var x0=70,x1=W-70,y=H-22;var d=darkOn();var uic=d?'#E8E8EA':'#2C2C2A';
+ ctx.fillStyle='#D85A30';ctx.globalAlpha=0.14;ctx.fillRect(x0,y-8,(x1-x0)*0.12,16);ctx.fillStyle='#7F77DD';ctx.fillRect(x0+(x1-x0)*0.88,y-8,(x1-x0)*0.12,16);
+ ctx.fillStyle='#1D9E75';ctx.globalAlpha=0.16;ctx.fillRect(x0+(x1-x0)*0.35,y-8,(x1-x0)*0.3,16);ctx.globalAlpha=1;
+ ctx.strokeStyle=d?'#888780':'#9A9A93';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('шум · дробление',x0,y-13);ctx.textAlign='right';ctx.fillText('коллапс · обобщение',x1,y-13);
+ var lam=lamAt();var mx=x0+(x1-x0)*lam;ctx.fillStyle=(isCol()||isNoise())?'#D85A30':'#1D9E75';ctx.beginPath();ctx.arc(mx,y,7,0,6.283);ctx.fill();
+ ctx.fillStyle=uic;ctx.textAlign='left';ctx.font='12px system-ui';ctx.fillText('λ='+lam.toFixed(2),8,y+4);ctx.textAlign='start';}
+function ladder(){var c=document.getElementById('mrd-lad');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||340;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn();var uic=d?'#E8E8EA':'#2C2C2A';var rr=R();var nN=rr.length+1;var pY=26,cx=W*0.5;
+ function Y(i){return pY+(i/(nN-1))*(H-2*pY);}
+ // зоны
+ ctx.globalAlpha=0.10;ctx.fillStyle='#7F77DD';ctx.fillRect(0,0,W,Y(0.5));ctx.fillStyle='#D85A30';ctx.fillRect(0,Y(nN-1.5),W,H-Y(nN-1.5));ctx.fillStyle='#1D9E75';ctx.fillRect(0,Y(0.5),W,Y(nN-1.5)-Y(0.5));ctx.globalAlpha=1;
+ // вертикаль
+ ctx.strokeStyle=d?'#444441':'#D3D1C7';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx,Y(0));ctx.lineTo(cx,Y(nN-1));ctx.stroke();
+ ctx.textAlign='center';
+ for(var i=0;i<rr.length;i++){var y=Y(i);var c0=colLv(rr[i][1]);var on=(pos===i);
+  ctx.strokeStyle=d?'#3a3a3f':'#dad8ce';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-70,y);ctx.lineTo(cx+70,y);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,y,on?10:6,0,6.283);ctx.fillStyle=on?c0:(d?'#26262B':'#fff');ctx.fill();ctx.strokeStyle=c0;ctx.lineWidth=on?3:2;ctx.stroke();
+  ctx.fillStyle=on?uic:(d?'#B4B2A9':'#5F5E5A');ctx.font=(on?'600 16px':'14px')+' system-ui';ctx.fillText(rr[i][0],cx,y-12);
+  ctx.fillStyle=d?'#888780':'#9A9A93';ctx.font='10px system-ui';ctx.textAlign='left';ctx.fillText('λ='+(rr[i][1]/5).toFixed(2),cx+78,y+3);ctx.textAlign='center';}
+ // атомы
+ var ya=Y(nN-1);var ona=isNoise();ctx.beginPath();ctx.arc(cx,ya,ona?10:6,0,6.283);ctx.fillStyle=ona?'#D85A30':(d?'#26262B':'#fff');ctx.fill();ctx.strokeStyle='#D85A30';ctx.lineWidth=ona?3:2;ctx.stroke();
+ ctx.fillStyle=ona?uic:(d?'#B4B2A9':'#5F5E5A');ctx.font=(ona?'600 15px':'13px')+' system-ui';ctx.fillText('атомы: '+atoms(),cx,ya-12);
+ // подписи полюсов
+ ctx.fillStyle='#7F77DD';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('↑ обобщение → одно ядро (коллапс)',8,16);
+ ctx.fillStyle='#D85A30';ctx.fillText('↓ дробление → буквы/звуки (шум)',8,H-8);ctx.textAlign='start';}
+function render(){var e;e=document.getElementById('mrd-cur');if(e)e.textContent=curWord();
+ var st;if(isCol())st='<b style="color:#7F77DD">коллапс: одно всеобщее ядро — обобщать больше некуда, движение кончилось</b>';
+ else if(isNoise())st='<b style="color:#D85A30">шум: слово рассыпано на буквы/звуки — дробить больше некуда, движение кончилось</b>';
+ else st='<b style="color:#1D9E75">живая зона: есть куда и обобщать, и дробить</b>';
+ e=document.getElementById('mrd-state');if(e)e.innerHTML=st;
+ var lam=lamAt(),M=4*lam*(1-lam);
+ function brow(l,v){return '<div class="cand"><span class="w">'+l+'</span><span class="bar"><i style="width:'+Math.round(Math.max(0,Math.min(1,v))*100)+'%"></i></span><span style="color:var(--text-muted)">'+v.toFixed(2)+'</span></div>';}
+ var B=(isCol()||isNoise())?(isCol()?'1 (только ▼)':'1 (только ▲)'):'2 (▲ и ▼)';
+ e=document.getElementById('mrd-metr');if(e)e.innerHTML=brow('λ',lam)+brow('M(λ)',M)+'<div class="cand"><span class="w">ветвление B</span><span style="color:var(--text-muted)">направлений движения: '+B+'</span></div>';
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=path.join(' &larr; ')||'—';
+ document.getElementById('mrd-up').disabled=isCol();document.getElementById('mrd-down').disabled=isNoise();}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.1,(ts-last)/1000);last=ts;var lam=lamAt();FX.ambient(0.02*4*lam*(1-lam));FX.freq(110+lam*150);
+ if(auto){acc+=dt;var iv=1/spd;while(acc>=iv){acc-=iv;if(hold>0){hold--;}else{if(pos<=0){dir=1;hold=2;}else if(pos>=R().length){dir=-1;hold=2;}move(dir);}}}
+ arc();ladder();render();requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+var tabs=$('mrd-tabs');for(var i=0;i<LAD.length;i++){(function(k){var b=document.createElement('button');b.className='tab'+(k===0?' on':'');b.textContent=LAD[k].n;b.onclick=function(){li!==k&&setLad(k);var ch=tabs.children;for(var j=0;j<ch.length;j++)ch[j].className='tab'+(j===k?' on':'');};tabs.appendChild(b);})(i);}
+$('mrd-up').onclick=function(){auto=false;$('mrd-auto').className='btn';move(-1);};
+$('mrd-down').onclick=function(){auto=false;$('mrd-auto').className='btn';move(1);};
+$('mrd-auto').onclick=function(){auto=!auto;this.className='btn'+(auto?' on':'');};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',function(){arc();ladder();});
+pushlog();requestAnimationFrame(loop);
+})();
+</script></body></html>

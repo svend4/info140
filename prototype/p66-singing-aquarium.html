@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Поющий аквариум (феромоны × окна × песня)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:360px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);touch-action:none}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.song{font-size:15px;line-height:1.85}.song .fresh{color:#1D9E75;font-weight:600}.song .rep{color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Поющий аквариум</div>
+<div class="sub">рой сам находит, что петь: странник топчет феромонные тропы (p62), сильнейшая цепь становится СТРОКОЙ ПЕСНИ (p65). Тропа держится — строка повторяется как мантра (окна закрыты); тропа перестроилась — 🪟 окно, в песню входит новая строка. Испарение решает, как часто песня обновляется</div>
+<canvas id="mrd-c"></canvas>
+<div class="hud"><span>строк спето <b id="mrd-ln">0</b></span><span>окон в песне <b id="mrd-win">0</b></span><span>подряд повторов <b id="mrd-rep">0</b></span><span>вердикт: <b id="mrd-verd">—</b></span></div>
+<div class="panel"><h3>🎵 Песня троп (поётся из графа)</h3><div class="song" id="mrd-song">—</div></div>
+<div class="panel"><h3>Журнал</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶ аквариум поёт</button><button class="btn" id="mrd-reset">↻</button><button class="btn" id="mrd-snd">♪ звук</button>
+<label>испарение <input id="mrd-ev" type="range" min="0.01" max="0.25" step="0.01" value="0.07"></label></div>
+<div class="note">Замыкание трёх линий: феромоны in4n (память маршрутов) + оконный ритм кунг-фу/мантры (повтор→окно) + жанровая живая зона. Мало испарения → тропа каменеет, песня зацикливается (колея); много → тропы не живут, песня рвётся (шум); середина → живая песня: куплеты повторяются, окна вводят новые. Каждая строка озвучивается нотами по темам слов (XAMPP). Файл: prototype/p66-singing-aquarium.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var THC={'г':'#378ADD','д':'#1D9E75','с':'#EF9F27','м':'#7F77DD','в':'#D85A30','п':'#639922'};
+var TFREQ={'г':262,'д':330,'с':392,'м':440,'в':494,'п':587};
+var WORDS=[['город','г'],['улица','г'],['мост','гд'],['путь','дм'],['поток','д'],['поезд','гд'],['свет','с'],['заря','сп'],['луч','с'],['слово','м'],['мысль','мв'],['идея','м'],['время','в'],['тишина','в'],['река','пд'],['сад','п'],['смысл','м'],['вечность','в']];
+var N=[],E=[],run=true,evap=0.07,last=0,Wc=640,Hc=360,logL=[];
+var trav={cur:0,prev:-1,tgt:0,tw:1,prevTmp:null},accHop=0,accLine=0;
+var song=[],prevChain='',repRun=0,lines=0,wins=0;
+function shares(a,b){for(var i=0;i<a.tg.length;i++)if(b.tg.indexOf(a.tg[i])>=0)return true;return false;}
+function reset(){N=[];E=[];logL=[];song=[];prevChain='';repRun=0;lines=0;wins=0;
+ for(var i=0;i<WORDS.length;i++)N.push({w:WORDS[i][0],tg:WORDS[i][1].split(''),x:60+Math.random()*(Wc-120),y:60+Math.random()*(Hc-120),vx:0,vy:0,deg:0,drag:false});
+ for(i=0;i<N.length;i++)for(var j=i+1;j<N.length;j++)if(shares(N[i],N[j])&&Math.random()<0.8)E.push({a:i,b:j,ph:0,L:90+Math.random()*40});
+ for(i=0;i<N.length;i++){var has=false;for(j=0;j<E.length;j++)if(E[j].a===i||E[j].b===i)has=true;
+  if(!has)E.push({a:i,b:(i+1)%N.length,ph:0,L:110});}
+ for(j=0;j<E.length;j++){N[E[j].a].deg++;N[E[j].b].deg++;}
+ trav={cur:0,prev:-1,tgt:0,tw:1,prevTmp:null};}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function edgesOf(i){var o=[];for(var j=0;j<E.length;j++)if(E[j].a===i||E[j].b===i)o.push(E[j]);return o;}
+function hop(){var cur=trav.tgt;trav.cur=cur;trav.prev=trav.prevTmp!=null?trav.prevTmp:trav.prev;
+ var es=edgesOf(cur);if(!es.length)return;
+ var best=null,bw=-1;
+ for(var k=0;k<es.length;k++){var e=es[k];var o=(e.a===cur)?e.b:e.a;if(o===trav.prev&&es.length>1)continue;
+  var st=shares(N[cur],N[o])?0.4:0;
+  var w=1+e.ph*1.8+st+Math.random()*0.7;
+  if(w>bw){bw=w;best={e:e,o:o};}}
+ if(!best)return;
+ best.e.ph+=1;trav.prevTmp=cur;trav.tgt=best.o;trav.tw=0;}
+function physics(dt){var i,j;
+ for(i=0;i<N.length;i++)for(j=i+1;j<N.length;j++){var a=N[i],b=N[j];
+  var dx=b.x-a.x,dy=b.y-a.y;var d2=dx*dx+dy*dy+40;var d=Math.sqrt(d2);
+  var F=5200/d2;var fx=dx/d*F,fy=dy/d*F;
+  if(!a.drag){a.vx-=fx;a.vy-=fy;}if(!b.drag){b.vx+=fx;b.vy+=fy;}}
+ for(j=0;j<E.length;j++){var e=E[j];var a2=N[e.a],b2=N[e.b];
+  var dx2=b2.x-a2.x,dy2=b2.y-a2.y;var d3=Math.sqrt(dx2*dx2+dy2*dy2)+0.01;
+  var F2=(d3-e.L)*0.02;var fx2=dx2/d3*F2,fy2=dy2/d3*F2;
+  if(!a2.drag){a2.vx+=fx2;a2.vy+=fy2;}if(!b2.drag){b2.vx-=fx2;b2.vy-=fy2;}}
+ for(i=0;i<N.length;i++){var n=N[i];if(n.drag)continue;
+  n.vx*=0.9;n.vy*=0.9;n.x+=n.vx;n.y+=n.vy;
+  if(n.x<36){n.x=36;n.vx=Math.abs(n.vx);}if(n.x>Wc-36){n.x=Wc-36;n.vx=-Math.abs(n.vx);}
+  if(n.y<36){n.y=36;n.vy=Math.abs(n.vy);}if(n.y>Hc-30){n.y=Hc-30;n.vy=-Math.abs(n.vy);}}
+ for(j=0;j<E.length;j++)E[j].ph*=Math.max(0,1-evap*dt*2);}
+function topChain(){var es=E.slice().sort(function(a,b){return b.ph-a.ph;}).slice(0,3).filter(function(e){return e.ph>0.6;});
+ if(!es.length)return null;var chain=[N[es[0].a].w,N[es[0].b].w];
+ for(var k=1;k<es.length;k++){var e=es[k];
+  if(N[e.a].w===chain[chain.length-1])chain.push(N[e.b].w);
+  else if(N[e.b].w===chain[chain.length-1])chain.push(N[e.a].w);
+  else if(N[e.a].w===chain[0])chain.unshift(N[e.b].w);
+  else if(N[e.b].w===chain[0])chain.unshift(N[e.a].w);}
+ return chain;}
+function singLine(){var ch=topChain();if(!ch){addLog('тропы ещё слабы — петь нечего');return;}
+ var key=ch.join('|');lines++;
+ // озвучка строки: ноты по темам слов
+ for(var i=0;i<ch.length;i++){(function(w,idx){var nd=null;for(var q=0;q<N.length;q++)if(N[q].w===w)nd=N[q];
+  var f=nd?(TFREQ[nd.tg[0]]||440):440;setTimeout(function(){FX.blip(f,0.12,'sine');},idx*180);})(ch[i],i);}
+ var line=ch.join(' — ');
+ if(key===prevChain){repRun++;song.push({t:line,f:false});
+  addLog('повтор куплета ×'+repRun+' — тропа держится (окна закрыты)');}
+ else {wins++;var old=prevChain;prevChain=key;repRun=1;song.push({t:line,f:true});
+  addLog('🪟 <b>ОКНО В ПЕСНЕ</b>: тропа перестроилась → новый куплет «<b>'+line+'</b>»');FX.chord([523,659,784],0.07);}
+ if(song.length>7)song.shift();}
+function verdict(){if(lines<3)return ['песня рождается…','#888780'];
+ var wr=wins/lines;
+ if(wr<0.15)return ['колея: песня зациклилась (мало испарения?)','#7F77DD'];
+ if(wr>0.75)return ['шум: тропы не живут, куплеты рвутся','#D85A30'];
+ return ['живая песня: куплеты повторяются, окна вводят новые','#1D9E75'];}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||360;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);Wc=W;Hc=H;
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';
+ var chain=topChain()||[];
+ for(var j=0;j<E.length;j++){var e=E[j];var a=N[e.a],b=N[e.b];
+  ctx.strokeStyle=d?'#3a3a3f':'#dad8ce';ctx.lineWidth=1;ctx.globalAlpha=0.6;
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  if(e.ph>0.15){var inCh=chain.indexOf(N[e.a].w)>=0&&chain.indexOf(N[e.b].w)>=0;
+   ctx.strokeStyle=inCh?'#1D9E75':'#EF9F27';ctx.globalAlpha=Math.min(0.9,e.ph*0.2);ctx.lineWidth=Math.min(7,0.5+e.ph*0.8);
+   ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}}
+ ctx.globalAlpha=1;
+ for(var i=0;i<N.length;i++){var n=N[i];var rad=6+n.deg*1.5;var inCh=chain.indexOf(n.w)>=0;
+  ctx.beginPath();ctx.arc(n.x,n.y,rad+(inCh?2:0),0,6.283);ctx.fillStyle=THC[n.tg[0]]||'#888780';ctx.fill();
+  if(inCh){ctx.strokeStyle='#1D9E75';ctx.lineWidth=2.5;ctx.stroke();}
+  ctx.fillStyle=uic;ctx.font=(inCh?'600 11px':'10px')+' system-ui';ctx.textAlign='center';ctx.fillText(n.w,n.x,n.y-rad-4);}
+ var A2=N[trav.cur],B2=N[trav.tgt];var t=trav.tw;t=t*t*(3-2*t);
+ var tx=A2.x+(B2.x-A2.x)*t,ty=A2.y+(B2.y-A2.y)*t;
+ ctx.beginPath();ctx.arc(tx,ty,10,0,6.283);ctx.fillStyle='#EF9F27';ctx.globalAlpha=0.25;ctx.fill();ctx.globalAlpha=1;
+ ctx.beginPath();ctx.arc(tx,ty,5,0,6.283);ctx.fillStyle='#EF9F27';ctx.fill();
+ ctx.textAlign='left';ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.fillText('зелёная тропа = текущий куплет песни',10,16);ctx.textAlign='start';}
+function render(){draw();var v=verdict();
+ document.getElementById('mrd-ln').textContent=lines;
+ document.getElementById('mrd-win').textContent=wins;
+ document.getElementById('mrd-rep').textContent=repRun;
+ var e=document.getElementById('mrd-verd');if(e)e.innerHTML='<span style="color:'+v[1]+'">'+v[0]+'</span>';
+ e=document.getElementById('mrd-song');if(e){var h='';for(var i=0;i<song.length;i++)h+='<div class="'+(song[i].f?'fresh':'rep')+'">'+(song[i].f?'🪟 ':'· ')+song[i].t+'</div>';
+  e.innerHTML=h||'<span style="color:var(--text-muted)">странник топчет первые тропы…</span>';}
+ e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var tot=0;for(var j=0;j<E.length;j++)tot+=E[j].ph;FX.ambient(0.012+Math.min(0.014,tot*0.001));
+ if(run){physics(dt);trav.tw=Math.min(1,trav.tw+dt*1.5);
+  accHop+=dt;if(trav.tw>=1&&accHop>=0.9){accHop=0;hop();}
+  accLine+=dt;if(accLine>=3.2){accLine=0;singLine();}}
+ render();requestAnimationFrame(loop);}
+var cv=document.getElementById('mrd-c'),dragN=null;
+function hitNode(mx,my){for(var i=N.length-1;i>=0;i--){var n=N[i];var r=8+n.deg*1.5;if((mx-n.x)*(mx-n.x)+(my-n.y)*(my-n.y)<r*r*1.6)return n;}return null;}
+cv.addEventListener('pointerdown',function(e){var rc=cv.getBoundingClientRect();var n=hitNode(e.clientX-rc.left,e.clientY-rc.top);if(n){dragN=n;n.drag=true;}});
+window.addEventListener('pointermove',function(e){if(!dragN)return;var rc=cv.getBoundingClientRect();dragN.x=e.clientX-rc.left;dragN.y=e.clientY-rc.top;dragN.vx=0;dragN.vy=0;});
+window.addEventListener('pointerup',function(){if(dragN){dragN.drag=false;dragN=null;}});
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶ аквариум поёт':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-ev').oninput=function(){evap=parseFloat(this.value);};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

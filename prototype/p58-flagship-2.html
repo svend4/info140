@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Флагман 2.0: рой личных решений</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:380px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2)}
+.lam{display:flex;gap:10px;align-items:center;margin-top:10px;font-size:13px}
+.lam input{flex:1}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Флагман 2.0: рой личных решений</div>
+<div class="sub">переработка p4 по новым принципам: λ — теперь не команда, а КЛИМАТ. Каждый инфон имеет свой характер-порог tol и сам решает — слиться (к центру), раздробиться (к краю) или лететь дальше. Один климат → разные решения. Продержи живость Φ 60 секунд</div>
+<canvas id="mrd-c"></canvas>
+<div class="lam"><span style="color:var(--text-secondary)">климат: дробление</span><input id="mrd-l" type="range" min="0.05" max="0.95" step="0.01" value="0.5"><span style="color:var(--text-secondary)">слияние</span><span>λ=<b id="mrd-lv">0.50</b></span></div>
+<div class="hud"><span>⏱ <b id="mrd-t">60</b> с</span><span>Φ <b id="mrd-phi">—</b></span><span>инфонов <b id="mrd-n">0</b></span><span>решений/такт <b id="mrd-dec">0</b></span><span>очки <b id="mrd-sc">0</b></span><span>рекорд <b id="mrd-best">0</b></span><span id="mrd-res" style="font-weight:600"></span></div>
+<div class="panel"><h3>Журнал личных решений (кто · характер · почему · что)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶</button><button class="btn" id="mrd-reset">↻ заново</button><button class="btn" id="mrd-snd">♪ звук</button></div>
+<div class="note">Отличие от p4: там решала глобальная вероятность SPLIT·(1−λ), здесь каждый инфон сравнивает климат со СВОИМ порогом tol (0.3–0.7) и смотрит на соседей. Φ — траекторная: разнообразие орбит × M(λ населения) × активность решений (застой гасит Φ — по docs/12). Поражение: перенаселение (шум) или 60% в ядре (коллапс). Файл: prototype/p58-flagship-2.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RAMP=['#7F77DD','#378ADD','#1D9E75','#639922','#EF9F27','#D85A30'];
+var TAU=Math.PI*2,MAX=120,inf=[],id=1,lam=0.5,run=true,tleft=60,score=0,best=0,res='',decs=0,logL=[],acc=0,accIn=0,last=0,tGame=0;
+function rOf(lv){return 0.16+lv*0.155;}
+function spawn(lv,ang){inf.push({id:id++,lv:lv,ang:(ang!=null?ang:Math.random()*TAU),tol:0.3+Math.random()*0.4,rr:rOf(lv)});}
+function reset(){inf=[];id=1;for(var i=0;i<26;i++)spawn(2+Math.floor(Math.random()*2));tleft=60;score=0;res='';logL=[];tGame=0;}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();}
+function nbOf(f){for(var i=0;i<inf.length;i++){var q=inf[i];if(q===f||q.lv!==f.lv)continue;var da=Math.abs(q.ang-f.ang)%TAU;da=Math.min(da,TAU-da);if(da<0.3)return q;}return null;}
+function tick(){if(res)return;decs=0;var done={};var order=inf.slice();
+ for(var i=order.length-1;i>=0;i--){var f=order[i];if(done[f.id]||decs>=4)continue;
+  var nb=nbOf(f);
+  if(nb&&!done[nb.id]&&f.lv>0&&lam>f.tol){ // личное решение: слияние
+   done[f.id]=done[nb.id]=true;decs++;
+   var na=(f.ang+nb.ang)/2;inf.splice(inf.indexOf(nb),1);inf.splice(inf.indexOf(f),1);spawn(f.lv-1,na);
+   addLog('⚛ №'+f.id+' (tol '+f.tol.toFixed(2)+'): сосед №'+nb.id+' рядом, климат '+lam.toFixed(2)+' > порога → <b>слияние, орбита '+(f.lv-1)+'</b>');FX.chord([392,523],0.03);}
+  else if(!nb&&f.lv<5&&(1-lam)>f.tol&&inf.length<MAX-1){ // личное решение: дробление
+   done[f.id]=true;decs++;
+   inf.splice(inf.indexOf(f),1);spawn(f.lv+1,f.ang+0.12);spawn(f.lv+1,f.ang-0.12);
+   addLog('✂ №'+f.id+' (tol '+f.tol.toFixed(2)+'): одинок, климат дробления '+(1-lam).toFixed(2)+' > порога → <b>раскол, орбита '+(f.lv+1)+'</b>');FX.blip(300,0.03);}}
+}
+function inflow(){if(res)return;var rate=1+Math.floor(tGame/15);for(var i=0;i<rate;i++)if(inf.length<MAX)spawn(4+Math.round(Math.random()));}
+function phi(){if(!inf.length)return 0;var sh={},s=0,c0=0;
+ for(var i=0;i<inf.length;i++){sh[inf[i].lv]=1;s+=inf[i].lv;if(inf[i].lv===0)c0++;}
+ var div=Object.keys(sh).length/6;var lp=1-(s/inf.length)/5;var M=4*lp*(1-lp);
+ var act=Math.min(1,decs/2+0.3);
+ if(inf.length>=MAX||c0/inf.length>0.6)return 0;
+ return Math.max(0,div*0.4+M*0.4+act*0.2);}
+function checkEnd(){if(res)return;var c0=0;for(var i=0;i<inf.length;i++)if(inf[i].lv===0)c0++;
+ if(inf.length>=MAX){res='✗ ШУМ: перенаселение';FX.blip(120,0.2,'sawtooth');}
+ else if(inf.length&&c0/inf.length>0.6){res='✗ КОЛЛАПС: всё в ядре';FX.blip(150,0.2,'sawtooth');}
+ else if(tleft<=0){res='✓ ПОБЕДА! счёт '+Math.round(score);FX.chord([523,659,784,1047],0.1);}
+ if(res&&score>best){best=score;try{localStorage.setItem('mrd_flag2',String(Math.round(best)));}catch(e){}}}
+function darkOn(){return window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;}
+function draw(){var c=document.getElementById('mrd-c');if(!c)return;var ctx=c.getContext('2d');var r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;var W=r.width||640,H=r.height||380;c.width=W*dpr;c.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+ var d=darkOn(),uic=d?'#E8E8EA':'#2C2C2A';var cx=W/2,cy=H/2,R=Math.min(W,H)/2-18;
+ for(var lv=0;lv<=5;lv++){ctx.strokeStyle=d?'#33333a':'#e6e4da';ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,rOf(lv)*R,0,TAU);ctx.stroke();}
+ ctx.fillStyle='#7F77DD';ctx.globalAlpha=0.1;ctx.beginPath();ctx.arc(cx,cy,rOf(0)*R*0.9,0,TAU);ctx.fill();ctx.globalAlpha=1;
+ for(var i=0;i<inf.length;i++){var f=inf[i];var x=cx+Math.cos(f.ang)*f.rr*R,y=cy+Math.sin(f.ang)*f.rr*R;
+  ctx.beginPath();ctx.arc(x,y,4.5+(0.7-f.tol)*4,0,TAU);ctx.fillStyle=RAMP[f.lv];ctx.fill();}
+ ctx.fillStyle=uic;ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText('центр = обобщение',10,16);ctx.textAlign='right';ctx.fillText('край = дробление · размер точки = смелость (1−tol)',W-10,16);ctx.textAlign='start';}
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ var p=phi();FX.ambient(0.02*p);FX.freq(110+lam*150);
+ if(run&&!res){tGame+=dt;tleft-=dt;score+=p*dt*10;
+  acc+=dt;if(acc>=0.5){acc=0;tick();checkEnd();}
+  accIn+=dt;if(accIn>=2.2){accIn=0;inflow();}
+  for(var i=0;i<inf.length;i++){var f=inf[i];f.ang+=dt*(0.25-f.lv*0.03);f.rr+=(rOf(f.lv)-f.rr)*dt*3;}}
+ draw();
+ document.getElementById('mrd-lv').textContent=lam.toFixed(2);
+ document.getElementById('mrd-t').textContent=Math.max(0,Math.ceil(tleft));
+ document.getElementById('mrd-phi').textContent=p.toFixed(2);
+ document.getElementById('mrd-n').textContent=inf.length;
+ document.getElementById('mrd-dec').textContent=decs;
+ document.getElementById('mrd-sc').textContent=Math.round(score);
+ document.getElementById('mrd-best').textContent=Math.round(best);
+ document.getElementById('mrd-res').textContent=res;
+ var e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.length?logL.join('<br>'):'—';
+ requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-l').oninput=function(){lam=parseFloat(this.value);};
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){reset();};
+$('mrd-snd').onclick=function(){var on=FX.toggle();this.className='btn'+(on?' on':'');this.textContent=on?'♪ звук вкл':'♪ звук';};
+try{best=parseInt(localStorage.getItem('mrd_flag2')||'0',10)||0;}catch(e){}
+window.addEventListener('resize',draw);reset();requestAnimationFrame(loop);
+})();
+</script></body></html>

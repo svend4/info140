@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Верификатор представлений</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif;--mono:ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text-secondary);border-radius:7px;padding:6px 10px;font-size:12px}.tab.on{border-color:#1D9E75;color:#1D9E75;background:var(--surface-1)}
+.panel{border:1px solid var(--border);border-radius:10px;padding:11px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.repr{font-size:18px;font-family:var(--mono);color:#378ADD}
+.rbadge{font-size:11px;padding:2px 7px;border-radius:6px;margin-left:6px;color:#fff;vertical-align:1px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--border)}th{color:var(--text-secondary);font-weight:500}
+.mono{font-family:var(--mono)}.ok{color:#1D9E75;font-weight:600}.no{color:#D85A30;font-weight:600}
+.vbar{height:12px;border-radius:6px;background:var(--border);overflow:hidden;max-width:280px;margin-top:4px}.vbar>i{display:block;height:100%}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#D85A30;color:#D85A30}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Верификатор представлений</div>
+<div class="sub">верифицируемость по-настоящему: формула проверяется пересчётом, теорема — выборкой случаев, состав — сверкой, а ложное (даже «2+2=5» и неверная «теорема велосипеда») честно проваливается. По docs/14: V вычисляется, а не зашита</div>
+<div class="tabs" id="mrd-tabs"></div>
+<div class="panel"><h3 id="mrd-rh">Представление</h3><div class="repr" id="mrd-repr">—</div><div id="mrd-rinfo" style="font-size:12px;color:var(--text-secondary);margin-top:4px"></div></div>
+<div class="row" id="mrd-ctl"></div>
+<div class="panel"><h3>Проверка (реальный пересчёт)</h3><div id="mrd-tests">—</div>
+<div id="mrd-vlabel" style="margin-top:8px"></div><div class="vbar"><i id="mrd-vbar"></i></div></div>
+<div class="note">R-фасет: NUM (постулат, только ==), FRM (вычисление — подставил/пересчитал), THM (доказательство — проверка на выборке), MERO (состав — сверка инвентаря, не eval), WRD/ложь (нет формальной модели → не верифицируемо). Верификатор не «доказывает истину», а ловит несоответствие модели; «велосипед» честно не имеет вычислимой формулы. Файл: prototype/p47-verifier.html</div>
+</div><script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},freq:function(){},blip:function(){},chord:function(){},best:function(k,s){return s||0;}};
+var RC={NUM:'#888780',FRM:'#378ADD',THM:'#1D9E75',MERO:'#EF9F27',WRD:'#7F77DD'};
+var ST={brokenM:false,claim:4};
+function eq(a,b){return Math.abs(a-b)<0.01;}
+function nf(x){return (Math.abs(x-Math.round(x))<1e-9)?(''+Math.round(x)):x.toFixed(3);}
+var ITEMS=[
+ {key:'смысл',R:'THM',ctl:'breakM',info:'мера смысла M(λ); проверяем теорему о максимуме и нулях на полюсах',
+  repr:function(){return ST.brokenM?'M(λ)=4λ  (СЛОМАНО)':'M(λ)=4λ(1−λ)';},
+  run:function(){var f=ST.brokenM?function(l){return 4*l;}:function(l){return 4*l*(1-l);};var T=[];
+   T.push(['M(0.5)=1 (максимум)',nf(f(0.5)),'1',eq(f(0.5),1)]);
+   T.push(['M(0)=0 (полюс λ→0)',nf(f(0)),'0',eq(f(0),0)]);
+   T.push(['M(1)=0 (полюс λ→1)',nf(f(1)),'0',eq(f(1),0)]);
+   T.push(['симметрия M(0.3)=M(0.7)',nf(f(0.3)),nf(f(0.7)),eq(f(0.3),f(0.7))]);
+   T.push(['максимум: M(0.5)≥M(0.8)',f(0.5)>=f(0.8)?'да':'нет','да',f(0.5)>=f(0.8)]);
+   return {tests:T,applicable:true,note:ST.brokenM?'сломанная формула провалила нули и максимум — верификатор поймал ошибку':'все 5 проверок пройдены — формула реально верифицируема пересчётом'};}},
+ {key:'движение',R:'FRM',info:'v=Δs/Δt; проверяем подстановкой и обратным пересчётом',
+  repr:function(){return 'v = Δs / Δt';},
+  run:function(){var T=[];var v=10/2;T.push(['Δs=10,Δt=2 → v',nf(v),'5',eq(v,5)]);T.push(['обратно: v·Δt = Δs',nf(v*2),'10',eq(v*2,10)]);var v2=9/3;T.push(['Δs=9,Δt=3 → v',nf(v2),'3',eq(v2,3)]);return {tests:T,applicable:true,note:'формула согласована при подстановке и обращении'};}},
+ {key:'площадь круга',R:'FRM',info:'S=πr²; проверяем значения и монотонность',
+  repr:function(){return 'S = π·r²';},
+  run:function(){var S=function(r){return Math.PI*r*r;};var T=[];T.push(['S(0)=0',nf(S(0)),'0',eq(S(0),0)]);T.push(['S(1)=π≈3.142',nf(S(1)),'3.142',eq(S(1),Math.PI)]);T.push(['S(2)=4π≈12.566',nf(S(2)),'12.566',eq(S(2),4*Math.PI)]);T.push(['монотонность S(2)>S(1)',S(2)>S(1)?'да':'нет','да',S(2)>S(1)]);return {tests:T,applicable:true,note:'значения и монотонность подтверждены пересчётом'};}},
+ {key:'арифметика',R:'NUM',ctl:'claim',info:'постулат «2+2=?»; меняем утверждение и смотрим, ловит ли верификатор ложь',
+  repr:function(){return '2 + 2 = '+ST.claim;},
+  run:function(){var got=2+2;var ok=got===ST.claim;return {tests:[['2+2',''+got,''+ST.claim,ok]],applicable:true,note:ok?'постулат истинен':'ЛОЖЬ поймана: 2+2 ≠ '+ST.claim+' (верификатор не пропускает неверное)'};}},
+ {key:'велосипед',R:'MERO',info:'это СОСТАВ (инвентарь), а не вычислимая формула — проверяется сверкой, не пересчётом',
+  repr:function(){return 'Кл2·Рм1·Цп1·Пд2';},
+  run:function(){var atoms=('Кл2·Рм1·Цп1·Пд2').split('·');var T=[];var wf=true;for(var i=0;i<atoms.length;i++){var m=atoms[i].match(/^([А-Яа-я]+)(\d+)$/);var ok=!!m;if(!ok)wf=false;T.push(['атом «'+atoms[i]+'» = буквы+кратность',ok?'ок':'плохо','ок',ok]);}T.push(['атомов ≥ 2',atoms.length>=2?'да':'нет','да',atoms.length>=2]);return {tests:T,applicable:false,note:'структура состава корректна (driftCheck), НО это инвентарь — подставить и пересчитать нечего. Честной вычислимой «формулы велосипеда» нет (вывод docs/14).'};}},
+ {key:'ложная теорема',R:'WRD',info:'«велосипед всегда устойчив» — нет формальной модели',
+  repr:function(){return '«велосипед всегда устойчив»';},
+  run:function(){return {tests:[['есть формальная модель?','нет','нужна',false],['проверяемо на выборке?','нет','нужна',false]],applicable:false,note:'физически ложно (при v=0 падает) и нет модели → НЕ верифицируемо. Честно: такие утверждения нельзя класть в эталон (docs/14).'};}}
+];
+var ci=0;
+function $(id){return document.getElementById(id);}
+function render(){var it=ITEMS[ci];$('mrd-rh').innerHTML='Представление — «'+it.key+'» <span class="rbadge" style="background:'+RC[it.R]+'">'+it.R+'</span>';
+ $('mrd-repr').textContent=it.repr();$('mrd-rinfo').textContent=it.info;
+ // controls
+ var ctl=$('mrd-ctl');ctl.innerHTML='';
+ if(it.ctl==='breakM'){var b=document.createElement('button');b.className='btn'+(ST.brokenM?' on':'');b.textContent=ST.brokenM?'⚠ формула сломана':'сломать формулу';b.onclick=function(){ST.brokenM=!ST.brokenM;render();};ctl.appendChild(b);}
+ if(it.ctl==='claim'){[4,5].forEach(function(v){var b=document.createElement('button');b.className='btn'+(ST.claim===v?' on':'');b.textContent='2+2='+v;b.onclick=function(){ST.claim=v;render();};ctl.appendChild(b);});}
+ var res=it.run();
+ var rows='<table><tr><th>проверка</th><th>получено</th><th>ожидалось</th><th>итог</th></tr>';
+ var pass=0;for(var i=0;i<res.tests.length;i++){var t=res.tests[i];if(t[3])pass++;rows+='<tr><td>'+t[0]+'</td><td class="mono">'+t[1]+'</td><td class="mono">'+t[2]+'</td><td class="'+(t[3]?'ok':'no')+'">'+(t[3]?'✓':'✗')+'</td></tr>';}
+ rows+='</table>';$('mrd-tests').innerHTML=rows;
+ var V=res.tests.length?pass/res.tests.length:0;
+ var vl=$('mrd-vlabel'),vb=$('mrd-vbar');
+ if(res.applicable){var col=V>=0.99?'#1D9E75':V>=0.5?'#EF9F27':'#D85A30';vl.innerHTML='<b style="color:'+col+'">верифицируемость V = '+V.toFixed(2)+'</b> ('+pass+'/'+res.tests.length+' проверок) — '+res.note;vb.style.width=Math.round(V*100)+'%';vb.style.background=col;FX.blip(V>0.9?660:200,0.04,V>0.9?'sine':'sawtooth');}
+ else {vl.innerHTML='<b style="color:#888780">V — неприменима</b> · '+res.note;vb.style.width='0%';}}
+var tabs=$('mrd-tabs');for(var i=0;i<ITEMS.length;i++){(function(k){var b=document.createElement('div');b.className='tab'+(k===0?' on':'');b.textContent=ITEMS[k].key;b.onclick=function(){ci=k;var ch=tabs.children;for(var j=0;j<ch.length;j++)ch[j].className='tab'+(j===k?' on':'');render();};tabs.appendChild(b);})(i);}
+render();
+})();
+</script></body></html>

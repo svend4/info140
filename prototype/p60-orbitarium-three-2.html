@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MERIDIAN — Орбитарий 2.0 на Three.js (решения + путешественник)</title>
+<style>
+:root{--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--surface-1:#F7F6F2;--surface-2:#FFFFFF;--border:#D3D1C7;--font-sans:system-ui,'Segoe UI',Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--text-primary:#E8E8EA;--text-secondary:#B4B2A9;--text-muted:#888780;--surface-1:#26262B;--surface-2:#1F1F23;--border:#444441}}
+html,body{margin:0;background:#FBFAF7}@media (prefers-color-scheme:dark){html,body{background:#1A1A1C}}
+body{padding:24px;display:flex;justify-content:center;font-family:var(--font-sans)}
+.wrap{max-width:680px;width:100%;color:var(--text-primary)}.h1{font-size:20px;font-weight:500;margin:0 0 2px}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:12px}
+#mrd-c{display:block;width:100%;height:420px;border:1px solid var(--border);border-radius:10px;background:#101014;cursor:grab;touch-action:none}
+.hud{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px}.hud b{font-weight:600}
+.panel{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:10px;background:var(--surface-1);font-size:13px}
+.panel h3{margin:0 0 6px;font-size:13px;font-weight:500;color:var(--text-secondary)}
+.log{font-size:12.5px;line-height:1.6;color:var(--text-secondary)}.log b{color:var(--text-primary)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13px}
+.btn{cursor:pointer;border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);border-radius:8px;padding:7px 12px;font-size:13px}.btn.on{border-color:#1D9E75;color:#1D9E75}
+.note{font-size:12px;color:var(--text-muted);margin-top:10px}
+</style></head><body><div class="wrap">
+<div class="h1">MERIDIAN — Орбитарий 2.0 (Three.js)</div>
+<div class="sub">переработка p6: настоящий 3D, но точки больше не безликое облако — каждая со своим числом сама выбирает оболочку по арифметике с целью T, а светящийся ПУТЕШЕСТВЕННИК (из вашего InfoAquarium) странствует между родственными числами (общий делитель), оставляя след. Тяни мышью — вращай</div>
+<canvas id="mrd-c"></canvas>
+<div class="hud"><span>цель T: <b id="mrd-t">—</b></span><span>странник у: <b id="mrd-tr">—</b></span><span id="mrd-err" style="color:#D85A30"></span></div>
+<div class="panel"><h3>Журнал странника (родство = общий делитель)</h3><div class="log" id="mrd-log">—</div></div>
+<div class="row"><button class="btn on" id="mrd-run">▶</button><button class="btn" id="mrd-reset">↻</button>
+<label>темп <input id="mrd-spd" type="range" min="1" max="6" step="1" value="3"></label></div>
+<div class="note">Нужен интернет (Three.js r128 с cdnjs), как и p6. Оболочки: делители T (внутренняя), равное/живая (средняя), кратные (третья), чужие (внешняя). Путешественник идёт от числа к числу только при НОД>1 — путь по смыслу, а не по случайности; след тает. Файл: prototype/p60-orbitarium-three-2.html</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="lib/mrd-fx.js"></script><script>
+(function(){
+var FX=window.MRDFX||{toggle:function(){return false;},ambient:function(){},blip:function(){},chord:function(){}};
+if(!window.THREE){document.getElementById('mrd-err').textContent='Three.js не загрузился — нужен интернет (cdnjs). Офлайн-версия: p59.';return;}
+var cv=document.getElementById('mrd-c');
+var renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+var scene=new THREE.Scene();scene.background=new THREE.Color(0x101014);
+var camera=new THREE.PerspectiveCamera(55,1,0.1,100);
+var SH=[1.0,1.7,2.4,3.2];var SHC=[0x7F77DD,0x1D9E75,0x378ADD,0xD85A30];
+var TSEQ=[2,3,4,5,6,8,10,12],ti=0,run=true,spd=3,acc=0,accT=0,logL=[];
+function T(){return TSEQ[ti%TSEQ.length];}
+function gcd(a,b){while(b){var t=a%b;a=b;b=t;}return a;}
+function shellOf(n,t){if(n===t)return 1;if(t%n===0)return 0;if(n%t===0)return 2;return 3;}
+// оболочки
+for(var s=0;s<4;s++){var g=new THREE.SphereGeometry(SH[s],20,14);
+ var m=new THREE.MeshBasicMaterial({color:SHC[s],wireframe:true,transparent:true,opacity:0.10});
+ scene.add(new THREE.Mesh(g,m));}
+// инфоны
+var N=26,P=[];
+var pg=new THREE.BufferGeometry();
+var pos=new Float32Array(N*3),col=new Float32Array(N*3);
+for(var i=0;i<N;i++){var n=1+(i%13);P.push({n:n,th:Math.random()*Math.PI*2,ph:(Math.random()-0.5)*1.6,s:shellOf(n,T()),r:2});}
+pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+pg.setAttribute('color',new THREE.BufferAttribute(col,3));
+var pts=new THREE.Points(pg,new THREE.PointsMaterial({size:0.22,vertexColors:true,transparent:true,opacity:0.95}));
+scene.add(pts);
+// путешественник + след
+var trav=new THREE.Mesh(new THREE.SphereGeometry(0.13,12,10),new THREE.MeshBasicMaterial({color:0xEF9F27}));
+scene.add(trav);
+var glow=new THREE.Mesh(new THREE.SphereGeometry(0.24,12,10),new THREE.MeshBasicMaterial({color:0xEF9F27,transparent:true,opacity:0.25}));
+scene.add(glow);
+var trailPts=[],trailGeo=new THREE.BufferGeometry(),trailMat=new THREE.LineBasicMaterial({color:0xEF9F27,transparent:true,opacity:0.6});
+var trailLine=new THREE.Line(trailGeo,trailMat);scene.add(trailLine);
+var curI=0,tgtI=0,tw=1;
+function posOf(p){var c=Math.cos(p.ph);return new THREE.Vector3(SH[p.s]*c*Math.cos(p.th),SH[p.s]*Math.sin(p.ph)*0.7,SH[p.s]*c*Math.sin(p.th));}
+function addLog(s){logL.unshift(s);if(logL.length>4)logL.pop();var e=document.getElementById('mrd-log');if(e)e.innerHTML=logL.join('<br>');}
+function hop(){curI=tgtI;var cur=P[curI];var cands=[];
+ for(var i=0;i<P.length;i++){if(i===curI)continue;if(gcd(P[i].n,cur.n)>1)cands.push(i);}
+ if(!cands.length){tgtI=Math.floor(Math.random()*N);addLog('странник у №'+cur.n+': родни нет (НОД=1 со всеми) — случайный прыжок');}
+ else{tgtI=cands[Math.floor(Math.random()*cands.length)];var g2=gcd(P[tgtI].n,cur.n);
+  addLog('странник: №'+cur.n+' → №'+P[tgtI].n+' (<b>НОД='+g2+'</b> — родня по делителю)');}
+ tw=0;FX.blip(500,0.04);}
+function beat(){ti++;var t=T();for(var i=0;i<P.length;i++)P[i].s=shellOf(P[i].n,t);
+ document.getElementById('mrd-t').textContent=t;FX.blip(300+t*15,0.05);}
+var A=0.5,tilt=0.35,drag=false,px=0,py=0,last=0;
+cv.addEventListener('pointerdown',function(e){drag=true;px=e.clientX;py=e.clientY;cv.style.cursor='grabbing';});
+window.addEventListener('pointermove',function(e){if(!drag)return;A+=(e.clientX-px)*0.008;tilt=Math.max(-1.2,Math.min(1.2,tilt+(e.clientY-py)*0.008));px=e.clientX;py=e.clientY;});
+window.addEventListener('pointerup',function(){drag=false;cv.style.cursor='grab';});
+function resize(){var r=cv.getBoundingClientRect();var w=r.width||640,h=r.height||420;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resize);resize();
+document.getElementById('mrd-t').textContent=T();
+function loop(ts){if(!last)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+ if(run){if(!drag)A+=dt*0.12;acc+=dt;var iv=3.6-spd*0.45;if(acc>=iv){acc=0;beat();}
+  accT+=dt;if(accT>=1.6){accT=0;hop();}}
+ // инфоны
+ for(var i=0;i<P.length;i++){var p=P[i];p.th+=dt*(0.25-p.s*0.04);p.r+=(SH[p.s]-p.r)*dt*2.5;
+  var c=Math.cos(p.ph);pos[i*3]=p.r*c*Math.cos(p.th);pos[i*3+1]=p.r*Math.sin(p.ph)*0.7;pos[i*3+2]=p.r*c*Math.sin(p.th);
+  var cc=new THREE.Color(SHC[p.s]);col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;}
+ pg.attributes.position.needsUpdate=true;pg.attributes.color.needsUpdate=true;
+ // странник
+ tw=Math.min(1,tw+dt*1.2);var a=posOf(P[curI]),b=posOf(P[tgtI]);
+ var tp=a.clone().lerp(b,tw*tw*(3-2*tw));trav.position.copy(tp);glow.position.copy(tp);
+ trailPts.push(tp.clone());if(trailPts.length>36)trailPts.shift();
+ trailGeo.setFromPoints(trailPts);
+ document.getElementById('mrd-tr').textContent='№'+P[tw<1?curI:tgtI].n;
+ // камера
+ camera.position.set(Math.cos(A)*7*Math.cos(tilt),Math.sin(tilt)*7,Math.sin(A)*7*Math.cos(tilt));
+ camera.lookAt(0,0,0);
+ renderer.render(scene,camera);FX.ambient(0.014);
+ requestAnimationFrame(loop);}
+function $(id){return document.getElementById(id);}
+$('mrd-run').onclick=function(){run=!run;this.textContent=run?'▶':'⏸';this.className='btn'+(run?' on':'');};
+$('mrd-reset').onclick=function(){ti=0;for(var i=0;i<P.length;i++)P[i].s=shellOf(P[i].n,T());trailPts=[];logL=[];document.getElementById('mrd-t').textContent=T();};
+$('mrd-spd').oninput=function(){spd=parseInt(this.value,10);};
+requestAnimationFrame(loop);
+})();
+</script></body></html>

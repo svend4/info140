@@ -1,0 +1,42 @@
+.searchSection{min-width:0;container-type:inline-size}
+.searchControls{display:grid;grid-template-columns:minmax(0,1fr) minmax(132px,.7fr) auto;gap:6px;align-items:end;margin-bottom:8px}
+.searchControls label{display:grid;gap:3px;min-width:0;color:#5c6980;font-size:10px}
+.searchControls input,.searchControls select{box-sizing:border-box;width:100%;min-width:0;height:30px;border:1px solid #cad3df;border-radius:5px;background:#fff;color:#182333;padding:0 8px;font:inherit}
+.searchControls button{height:30px;border-radius:5px;padding:0 10px;white-space:nowrap}
+.searchTrace{min-width:0;color:#263347}
+.searchTraceHead{display:grid;gap:6px;padding:7px 0;border-bottom:1px solid #d9e0e8}
+.searchTraceState{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.searchTraceState b{font-size:11px;text-transform:uppercase;color:#9b3c31}
+.searchTraceState b.ready{color:#008d79}
+.searchTraceState span{font-size:10px;color:#66758b;text-align:right}
+.searchIdentities{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+.searchIdentity{display:flex;align-items:center;gap:4px;flex:0 0 auto;font-size:9px;color:#77849a}
+.searchIdentity b{font-weight:600}
+.searchIdentity code{color:#35445b}
+.searchLayers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));min-width:0;border-bottom:1px solid #d9e0e8}
+.searchLayer{min-width:0;padding:8px 7px 9px 0}
+.searchLayer+.searchLayer{border-left:1px solid #e1e6ed;padding-left:7px}
+.searchLayerHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 5px;align-items:baseline;margin-bottom:6px}
+.searchLayerHead span{font-size:10px;font-weight:700;color:#28364a;text-transform:uppercase}
+.searchLayerHead b{font-size:14px;color:#008d79}
+.searchLayerHead code{grid-column:1/-1;font-size:8px;color:#687891;overflow-wrap:anywhere}
+.searchLayer.structural .searchLayerHead b{color:#7567d8}
+.searchLayer.evidence .searchLayerHead b{color:#d8513f}
+.searchResultRow{display:grid;gap:3px;min-width:0;padding:5px 0;border-top:1px solid #edf0f4}
+.searchResultRow b{font-size:10px;color:#17243a;overflow-wrap:anywhere}
+.searchResultRow span{font-size:9px;line-height:1.35;color:#596981;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.searchResultRow code{font-size:8px;color:#008d79;overflow-wrap:anywhere}
+@container (max-width:520px){.searchControls{grid-template-columns:1fr}.searchControls label:nth-child(2),.searchControls button{grid-column:1;grid-row:auto}.searchControls button{height:32px}.searchLayers{grid-template-columns:1fr}.searchLayer+.searchLayer{border-left:0;border-top:1px solid #e1e6ed;padding-left:0}.searchLayer{padding-right:0}.searchResultRow span{-webkit-line-clamp:2}}
+.searchLayer.structural .searchResultRow code{color:#7567d8}
+.searchEvidenceBoundary,.searchEmpty{font-size:9px;line-height:1.45;color:#66758b;padding:5px 0}
+.searchEvidenceCode{display:block;margin-top:5px;color:#d8513f;font-size:9px}
+.searchSteps{display:flex;gap:5px;min-width:0;overflow-x:auto;padding-top:7px;scrollbar-width:thin}
+.searchStep{display:grid;grid-template-columns:auto auto;gap:2px 5px;align-items:center;flex:0 0 108px;min-height:34px;padding:4px 5px;border-left:3px solid #cad3df;background:#f6f8fa}
+.searchStep b{font-size:9px;color:#637188}
+.searchStep span{font-size:9px;color:#25334a}
+.searchStep code{grid-column:1/-1;font-size:8px;color:#6f7c90;overflow-wrap:anywhere}
+.searchStep.ready{border-left-color:#008d79}
+.searchStep.abstain,.searchStep.empty{border-left-color:#e3aa2c}
+.searchStep.error{border-left-color:#d8513f}
+@media (max-width:1100px){.searchControls{grid-template-columns:minmax(0,1fr) auto}.searchControls label:nth-child(2){grid-column:1/2}.searchControls button{grid-column:2;grid-row:1/3;height:100%}.searchLayers{grid-template-columns:1fr}.searchLayer+.searchLayer{border-left:0;border-top:1px solid #e1e6ed;padding-left:0}.searchLayer{padding-right:0}.searchResultRow span{-webkit-line-clamp:2}}
+@media (max-width:680px){.searchControls{grid-template-columns:1fr}.searchControls label:nth-child(2),.searchControls button{grid-column:1;grid-row:auto}.searchControls button{height:32px}.searchTraceState{align-items:flex-start;flex-direction:column}.searchTraceState span{text-align:left}.searchStep{flex-basis:124px}}
