@@ -92,6 +92,7 @@
 | 50 | [Направленный QUALIFIES с полным parser replay](50-p78-qualifier-direction-contract-implementation.md) | content-addressed `DIRECTED/ABSTAIN` для точного `через <METHOD>` с позиционным span witness и буквальным source remainder; adapter допускает только passage-relative `NARROWER` и сохраняет `PROPOSED` |
 | 51 | [Пассивная доказательная связь в P78](51-p78-evidence-backed-link-view-implementation.md) | bound validation receipt, bounded projector и content-addressed ViewModel подключены между EvidenceCandidate и 2D Flow; точные endpoints, replay/source/review boundaries, `ABSTAIN` и Microsoft Edge localhost regression |
 | 52 | [Маргинальный коридор 1D - 1.5D - 2D - 2.5D - 3D](52-p78-marginal-corridor-jamming-fragmentation.md) | jamming ограничен правым порогом жёсткости, fragmentation/percolation описывает левый порог распада; форма, грамматика и семантика вычисляются раздельно, а `D=2N` остаётся только диагностической аналогией |
+| 53 | [Аудит текущей стадии (октябрь 2026): концепция, код, пути развития](53-audit-october-2026-concept-code-and-paths.md) | многоагентный аудит с состязательной верификацией: шесть реальных механизмов ядра против метафор, самоподтверждающийся контур эвристик, holdout 0/9, 12 дорожных карт без DoD; матрица зрелости, 81 консолидированная находка с доказательствами, ранжированные пути развития, первый спринт и метрики |
 
 ---
 
