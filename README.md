@@ -1,69 +1,54 @@
-# MERIDIAN: P78 Living Ring
+# MERIDIAN: P78 Living Ring (`info140`)
 
-MERIDIAN is an experimental browser project about continuous movement between
-two destructive semantic limits:
+MERIDIAN — экспериментальный браузерный проект о непрерывном движении между двумя деструктивными семантическими пределами:
 
-- excessive fragmentation into unrelated details;
-- excessive generalization into one static conclusion.
+- чрезмерной фрагментацией на несвязанные детали;
+- чрезмерным обобщением в один статичный вывод.
 
-The current working system is **P78 Living Ring**, a two-dimensional semantic
-ring that receives an external phrase, analyzes its structure, visualizes the
-reaction, and proposes a guarded continuation. The labels 1D, 1.5D, 2D, 2.5D,
-and 3D are model regimes and interface metaphors, not claims about physical
-dimensions.
+Текущая рабочая система — **P78 Living Ring**: двумерное семантическое кольцо, которое принимает внешнюю фразу, анализирует её структуру, визуализирует реакцию и предлагает защищённое продолжение. Обозначения 1D, 1.5D, 2D, 2.5D и 3D являются модельными режимами и метафорами интерфейса, а не утверждениями о физических измерениях.
 
-## Repository map
+## Структура репозитория
 
-- `prototype/p78-living-ring-interface.html` - primary interactive interface.
-- `prototype/lib/` - semantic, formula, reaction, evidence, state, and view
-  modules used by P78.
-- `prototype/tests/` - deterministic Node.js regression suites and browser
-  checks.
-- `prototype/p1-*.html` through `prototype/p77-*.html` - earlier experiments,
-  drafts, visual references, and reusable ideas.
-- `prototype/p79-pulse-tape-1d.html` - neighboring read-only 1D projection.
-- `prototype/p80-hypercube-center-3d.html` - neighboring read-only 3D
-  projection.
-- `docs/` - conceptual history, audits, specifications, implementation notes,
-  mathematical analogies, and evidence boundaries.
-- `tools/` - small calibration and data preparation utilities.
-- `index.html` - catalog of project prototypes.
+- `prototype/p78-living-ring-interface.html` — основной интерактивный интерфейс P78.
+- `prototype/lib/` — модули семантики, формул, реакций, доказательной базы, состояния и представления, используемые P78.
+- `prototype/tests/` — детерминированные регрессионные наборы Node.js (`run-all.cjs`) и браузерные проверки.
+- `prototype/p1-*.html` – `prototype/p77-*.html` — ранние эксперименты, черновики, визуальные прототипы и переиспользуемые идеи.
+- `prototype/p79-pulse-tape-1d.html` — соседняя read-only 1D-проекция.
+- `prototype/p80-hypercube-center-3d.html` — соседняя read-only 3D-проекция.
+- `docs/` — история концепции (`00-README.md` – `53-audit-october-2026-concept-code-and-paths.md`), спецификации, заметки по реализации, математические аналогии, границы доказательности и `diagrams/`.
+- `tools/` — небольшие утилиты калибровки и подготовки данных.
+- `index.html` — каталог прототипов проекта.
 
-P1-P80 are intentionally retained. They document how the current design
-developed and act as a parts library for future revisions; they should not all
-be interpreted as finished products.
+Прототипы P1–P80 намеренно сохранены в репозитории: они документируют эволюцию проекта и служат библиотекой компонентов для будущих ревизий, но не все из них следует рассматривать как законченные продукты.
 
-## Run locally
+## Локальный запуск
 
-With XAMPP serving `C:\xampp\htdocs`, open:
+При обслуживании каталога через HTTP-сервер (например, XAMPP для `C:\xampp\htdocs`) откройте в браузере:
 
 ```text
 http://localhost/01/games/02/prototype/p78-living-ring-interface.html
 ```
 
-The HTTP route is preferred over `file://` because browser workers and local
-resource loading have stricter rules for filesystem pages.
+HTTP-маршрут предпочтительнее `file://`, так как браузерные воркеры и загрузка локальных ресурсов имеют более строгие ограничения для файловой системы.
 
-## Tests
+## Тестирование
 
-Run the complete deterministic regression set from the repository root:
+Запуск полного детерминированного регрессионного набора из корня репозитория:
 
 ```powershell
 node prototype/tests/run-all.cjs
 ```
 
-The browser-specific checks require a local HTTP server.
+Браузерные проверки требуют запущенного локального HTTP-сервера.
 
-## Maturity and evidence
+## Зрелость и доказательность
 
-The interface, animation, state transitions, formula registry, regression
-tests, and several semantic diagnostics are implemented. Natural-language
-continuation remains experimental and heuristic. A numerical score or visual
-regime is not by itself proof of factual truth, linguistic correctness, or a
-scientific law. Documents under `docs/` distinguish implemented mechanisms
-from proposals and analogies where possible.
+Интерфейс, анимация, переходы состояний, реестр формул, регрессионные тесты и ряд семантических диагностик реализованы. Продолжение на естественном языке остаётся экспериментальным и эвристическим. Числовая оценка или визуальный режим сами по себе не являются доказательством фактической истинности, лингвистической корректности или научного закона. Документы в `docs/` по возможности разграничивают реализованные механизмы, предложения и аналогии.
 
-## License
+В ветке `ccr-850e4012-jnffea` добавлен аудит стадии 53 ([`docs/53-audit-october-2026-concept-code-and-paths.md`](docs/53-audit-october-2026-concept-code-and-paths.md), также строка индекса в [`docs/00-README.md`](docs/00-README.md)): инвентаризация, концептуальный и технический аудит с воспроизводимыми проверками, матрица зрелости, 13 путей развития и программа первого спринта из 14 задач (в статусе аудиторского снимка, без правки дорожной карты).
 
-This project is distributed under the GNU Affero General Public License
-version 3. See [`LICENSE`](LICENSE) for the complete terms.
+Исходный англоязычный README сохранён в [`docs/BRANCH_README_ORIG.md`](docs/BRANCH_README_ORIG.md).
+
+## Лицензия
+
+Проект распространяется под лицензией **GNU Affero General Public License v3.0 (AGPL-3.0)** — см. [`LICENSE`](LICENSE).
